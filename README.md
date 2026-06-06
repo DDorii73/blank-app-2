@@ -42,10 +42,11 @@ Firestore 컬렉션 이름은 `readingFluencyResults`입니다. 문서에는 교
 
 ## 로컬 실행
 
-브라우저 ES module과 Firebase CDN을 사용하므로 정적 파일 서버로 실행합니다.
+프로젝트 자체 Vite 실행 명령으로 5173 포트에서 실행합니다.
 
 ```bash
-python -m http.server 8000
+npm install
+npm run dev
 ```
 
-이후 `http://localhost:8000`으로 접속합니다.
+이후 `http://localhost:5173`으로 접속합니다.
