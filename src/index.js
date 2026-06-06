@@ -9,6 +9,7 @@ const googleLoginBtn = document.querySelector("#googleLoginBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
 const authStatus = document.querySelector("#authStatus");
 const configNotice = document.querySelector("#configNotice");
+const routeGrid = document.querySelector("#routeGrid");
 const protectedLinks = [
   document.querySelector("#studentPageLink"),
   document.querySelector("#monitorPageLink"),
@@ -35,16 +36,18 @@ protectedLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     if (link.getAttribute("aria-disabled") === "true") {
       event.preventDefault();
-      authStatus.textContent = "먼저 교사 Google 계정으로 로그인해 주세요.";
+      authStatus.textContent = "교사 로그인이 필요합니다.";
     }
   });
 });
 
 onAuthStateChanged(auth, (user) => {
   const isLoggedIn = Boolean(user);
+  const teacherName = getTeacherDisplayName(user);
 
   googleLoginBtn.classList.toggle("hidden", isLoggedIn);
   logoutBtn.classList.toggle("hidden", !isLoggedIn);
+  routeGrid.classList.toggle("hidden", !isLoggedIn);
 
   protectedLinks.forEach((link) => {
     link.classList.toggle("disabled", !isLoggedIn);
@@ -52,6 +55,11 @@ onAuthStateChanged(auth, (user) => {
   });
 
   authStatus.textContent = isLoggedIn
-    ? `${user.displayName || user.email} 교사 계정으로 로그인되었습니다.`
-    : "로그인하면 학생 검사 페이지와 교사 모니터링 페이지에 접근할 수 있습니다.";
+    ? `${teacherName} 선생님, 환영합니다.`
+    : "교사 로그인이 필요합니다.";
 });
+
+function getTeacherDisplayName(user) {
+  if (!user) return "";
+  return user.displayName || user.email?.split("@")[0] || "교사";
+}
