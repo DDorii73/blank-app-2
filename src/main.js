@@ -2,12 +2,12 @@ import { auth, db, RESULTS_COLLECTION } from "./firebaseConfig.js";
 import {
   onAuthStateChanged,
   signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+} from "firebase/auth";
 import {
   addDoc,
   collection,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+} from "firebase/firestore";
 
 const elements = {
   authGate: document.querySelector("#authGate"),
@@ -54,19 +54,24 @@ let analysisResult = null;
 
 elements.testDate.valueAsDate = new Date();
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "./index.html";
-    return;
-  }
+if (auth) {
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = "./index.html";
+      return;
+    }
 
-  currentTeacher = user;
-  elements.authGate.classList.add("hidden");
-  elements.appContent.classList.remove("hidden");
-  elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정`;
-});
+    currentTeacher = user;
+    elements.authGate.classList.add("hidden");
+    elements.appContent.classList.remove("hidden");
+    elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정`;
+  });
+} else {
+  window.location.href = "./index.html";
+}
 
 elements.logoutBtn.addEventListener("click", async () => {
+  if (!auth) return;
   await signOut(auth);
 });
 

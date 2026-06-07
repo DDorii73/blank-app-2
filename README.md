@@ -34,8 +34,20 @@ teacherMonitor.html   교사 모니터링 페이지
 1. Firebase 프로젝트에서 Web app을 생성합니다.
 2. Authentication에서 Google provider를 활성화합니다.
 3. Firestore Database를 생성합니다.
-4. `src/firebaseConfig.js`의 `firebaseConfig` 값을 Firebase 콘솔의 Web app
-   설정값으로 교체합니다.
+4. `.env.example`을 참고해 Firebase Web app 설정값을 환경변수로 등록합니다.
+
+```bash
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+```
+
+`src/firebaseConfig.js`는 위 환경변수를 읽어 Firebase Auth와 Firestore를 초기화합니다.
+Vite 설정에서 `FIREBASE_*` 접두사도 허용하므로, 이미 `FIREBASE_API_KEY`처럼 저장해둔
+값도 사용할 수 있습니다.
 
 Firestore 컬렉션 이름은 `readingFluencyResults`입니다. 문서에는 교사 UID가 함께
 저장되므로 모니터링 페이지는 현재 로그인한 교사의 결과만 조회합니다.

@@ -1,9 +1,14 @@
-import { auth, googleProvider, isFirebaseConfigured } from "./firebaseConfig.js";
+import {
+  auth,
+  googleProvider,
+  isFirebaseConfigured,
+  missingFirebaseConfigKeys,
+} from "./firebaseConfig.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
   signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+} from "firebase/auth";
 
 const googleLoginBtn = document.querySelector("#googleLoginBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
@@ -17,9 +22,19 @@ const protectedLinks = [
 
 if (!isFirebaseConfigured) {
   configNotice.classList.remove("hidden");
+  configNotice.innerHTML = `
+    Firebase 설정이 아직 입력되지 않았습니다.
+    환경변수 ${missingFirebaseConfigKeys.join(", ")} 값을 확인해 주세요.
+  `;
+  googleLoginBtn.disabled = true;
 }
 
 googleLoginBtn.addEventListener("click", async () => {
+  if (!auth) {
+    authStatus.textContent = "Firebase 설정을 먼저 확인해 주세요.";
+    return;
+  }
+
   try {
     authStatus.textContent = "Google 로그인 창을 여는 중입니다.";
     await signInWithPopup(auth, googleProvider);
@@ -29,6 +44,7 @@ googleLoginBtn.addEventListener("click", async () => {
 });
 
 logoutBtn.addEventListener("click", async () => {
+  if (!auth) return;
   await signOut(auth);
 });
 
@@ -41,7 +57,15 @@ protectedLinks.forEach((link) => {
   });
 });
 
-onAuthStateChanged(auth, (user) => {
+if (auth) {
+  onAuthStateChanged(auth, (user) => {
+    updateLandingAuthState(user);
+  });
+} else {
+  updateLandingAuthState(null);
+}
+
+function updateLandingAuthState(user) {
   const isLoggedIn = Boolean(user);
   const teacherName = getTeacherDisplayName(user);
 
@@ -57,7 +81,7 @@ onAuthStateChanged(auth, (user) => {
   authStatus.textContent = isLoggedIn
     ? `${teacherName} 선생님, 환영합니다.`
     : "교사 로그인이 필요합니다.";
-});
+}
 
 function getTeacherDisplayName(user) {
   if (!user) return "";

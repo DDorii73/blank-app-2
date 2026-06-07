@@ -2,13 +2,13 @@ import { auth, db, RESULTS_COLLECTION } from "./firebaseConfig.js";
 import {
   onAuthStateChanged,
   signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+} from "firebase/auth";
 import {
   collection,
   getDocs,
   query,
   where,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+} from "firebase/firestore";
 
 const elements = {
   authGate: document.querySelector("#authGate"),
@@ -31,20 +31,25 @@ const elements = {
 let currentTeacher = null;
 let savedResults = [];
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "./index.html";
-    return;
-  }
+if (auth) {
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "./index.html";
+      return;
+    }
 
-  currentTeacher = user;
-  elements.authGate.classList.add("hidden");
-  elements.dashboardContent.classList.remove("hidden");
-  elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정의 저장 결과`;
-  await loadResults();
-});
+    currentTeacher = user;
+    elements.authGate.classList.add("hidden");
+    elements.dashboardContent.classList.remove("hidden");
+    elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정의 저장 결과`;
+    await loadResults();
+  });
+} else {
+  window.location.href = "./index.html";
+}
 
 elements.logoutBtn.addEventListener("click", async () => {
+  if (!auth) return;
   await signOut(auth);
 });
 

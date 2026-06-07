@@ -1,25 +1,39 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Replace these values with the Firebase web app configuration from the Firebase console.
-// Firebase client config is not a secret. Do not put OpenAI API keys in this file.
-const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID",
+const env = import.meta.env;
+
+// Firebase web config is loaded from Vite environment variables.
+// Prefer VITE_FIREBASE_* names. FIREBASE_* names are also supported via vite.config.js envPrefix.
+export const firebaseConfig = {
+  apiKey: env.VITE_FIREBASE_API_KEY || env.FIREBASE_API_KEY || "",
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || env.FIREBASE_AUTH_DOMAIN || "",
+  projectId: env.VITE_FIREBASE_PROJECT_ID || env.FIREBASE_PROJECT_ID || "",
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || env.FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId:
+    env.VITE_FIREBASE_MESSAGING_SENDER_ID || env.FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: env.VITE_FIREBASE_APP_ID || env.FIREBASE_APP_ID || "",
 };
 
-export const isFirebaseConfigured = Object.values(firebaseConfig).every(
-  (value) => value && !String(value).startsWith("YOUR_"),
+const requiredFirebaseConfigKeys = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+];
+
+export const missingFirebaseConfigKeys = requiredFirebaseConfigKeys.filter(
+  (key) => !firebaseConfig[key],
 );
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const isFirebaseConfigured = missingFirebaseConfigKeys.length === 0;
+
+export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

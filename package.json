@@ -23,5 +23,8 @@
   "homepage": "https://github.com/DDorii73/blank-app-2#readme",
   "devDependencies": {
     "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "firebase": "^12.14.0"
   }
 }
