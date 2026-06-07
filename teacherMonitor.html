@@ -10,10 +10,10 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">Teacher Dashboard</p>
-        <h1>교사 모니터링 페이지</h1>
+        <h1>교사 모니터링</h1>
       </div>
       <nav class="top-nav">
-        <a href="./index.html">메인</a>
+        <a href="./index.html">메인 화면으로 돌아가기</a>
         <a href="./student.html">학생 검사</a>
         <button id="logoutBtn" class="ghost-button">로그아웃</button>
       </nav>
@@ -27,44 +27,40 @@
       <section id="dashboardContent" class="workspace hidden">
         <div class="teacher-strip">
           <span id="teacherInfo">교사 계정 확인 중</span>
-          <button id="refreshBtn" class="text-button" type="button">새로고침</button>
+          <span>저장된 학생별 검사 결과를 확인하는 화면입니다. 현재는 화면 구조 확인용 예시 데이터가 표시됩니다.</span>
         </div>
 
-        <section class="stats-grid">
-          <article class="stat-card">
-            <span>저장 검사</span>
-            <strong id="totalCount">0</strong>
-          </article>
-          <article class="stat-card">
-            <span>학생 수</span>
-            <strong id="studentCount">0</strong>
-          </article>
-          <article class="stat-card">
-            <span>평균 점수</span>
-            <strong id="averageScore">-</strong>
-          </article>
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>학생 검색 영역</h2>
+            <a class="secondary-button" href="./index.html">메인 화면으로 돌아가기</a>
+          </div>
+          <div class="field-grid two-columns">
+            <label>
+              학생 이름 검색
+              <input id="studentFilter" type="search" placeholder="예: 김민준" />
+            </label>
+            <label>
+              검사 날짜 검색
+              <input id="dateFilter" type="date" />
+            </label>
+          </div>
         </section>
 
         <section class="panel">
           <div class="panel-heading">
-            <h2>학생별 결과 조회</h2>
-            <div class="filter-row">
-              <input id="studentFilter" type="search" placeholder="학생 이름, ID, 반 검색" />
-              <input id="dateFilter" type="date" />
-            </div>
+            <h2>검사 결과 목록 영역</h2>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th>학생 이름</th>
                   <th>검사 날짜</th>
-                  <th>학생</th>
-                  <th>학년/반</th>
                   <th>읽기 속도</th>
-                  <th>정확도</th>
                   <th>최종 점수</th>
-                  <th>오류</th>
-                  <th>보고서</th>
+                  <th>주요 오류 유형</th>
+                  <th>상세 보기</th>
                 </tr>
               </thead>
               <tbody id="resultsTableBody"></tbody>
@@ -75,10 +71,18 @@
 
         <section id="detailPanel" class="panel hidden">
           <div class="panel-heading">
-            <h2>선택한 학생 보고서</h2>
+            <h2>상세 보기 영역</h2>
             <button id="closeDetailBtn" class="text-button" type="button">닫기</button>
           </div>
-          <div id="detailContent" class="report-card"></div>
+          <h3>학생 개별 분석 표</h3>
+          <div class="table-wrap">
+            <table>
+              <tbody id="detailAnalysisTableBody"></tbody>
+            </table>
+          </div>
+
+          <h3>학생 개별 보고서</h3>
+          <textarea id="detailReportText" rows="10" readonly></textarea>
         </section>
       </section>
     </main>

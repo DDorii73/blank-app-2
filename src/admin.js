@@ -1,38 +1,86 @@
-import { auth, db, RESULTS_COLLECTION } from "./firebaseConfig.js";
+import { auth } from "./firebaseConfig.js";
 import {
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
 
 const elements = {
   authGate: document.querySelector("#authGate"),
   dashboardContent: document.querySelector("#dashboardContent"),
   teacherInfo: document.querySelector("#teacherInfo"),
   logoutBtn: document.querySelector("#logoutBtn"),
-  refreshBtn: document.querySelector("#refreshBtn"),
-  totalCount: document.querySelector("#totalCount"),
-  studentCount: document.querySelector("#studentCount"),
-  averageScore: document.querySelector("#averageScore"),
   studentFilter: document.querySelector("#studentFilter"),
   dateFilter: document.querySelector("#dateFilter"),
   resultsTableBody: document.querySelector("#resultsTableBody"),
   emptyState: document.querySelector("#emptyState"),
   detailPanel: document.querySelector("#detailPanel"),
-  detailContent: document.querySelector("#detailContent"),
+  detailAnalysisTableBody: document.querySelector("#detailAnalysisTableBody"),
+  detailReportText: document.querySelector("#detailReportText"),
   closeDetailBtn: document.querySelector("#closeDetailBtn"),
 };
+
+const sampleMonitorResults = [
+  {
+    id: "sample-001",
+    studentName: "김민준",
+    gradeClass: "3학년 / 2반",
+    testDate: "2026-06-07",
+    passageTitle: "봄이 오는 길",
+    readingSpeed: {
+      syllablesPerMinute: 286,
+      wordsPerMinute: 64,
+    },
+    finalScore: {
+      score: 82,
+      band: "양호",
+    },
+    majorErrorTypes: ["대치/발음 오류", "반복"],
+    analysisRows: [
+      ["학생 이름", "김민준"],
+      ["학년/반", "3학년 / 2반"],
+      ["검사 날짜", "2026-06-07"],
+      ["읽기 자료", "봄이 오는 길"],
+      ["읽기 속도", "286 음절/분 · 64 어절/분"],
+      ["최종 점수", "82점 (양호)"],
+      ["주요 오류 유형", "대치/발음 오류, 반복"],
+    ],
+    reportText:
+      "학생 기본 정보\n- 김민준, 3학년 / 2반\n\n읽기 속도 결과\n- 286 음절/분, 64 어절/분\n\n주요 오류 유형\n- 대치/발음 오류와 반복 오류가 일부 관찰되었습니다.\n\n유창성 수준 요약\n- 전반적인 읽기 흐름은 유지되나 정확도 보완이 필요합니다.\n\n강점\n- 끝까지 읽기를 수행하며 전체 문맥을 유지하려는 모습이 보입니다.\n\n보완이 필요한 점\n- 어려운 어휘에서 다른 어절로 읽는 경향을 점검해야 합니다.\n\n지도 제안\n- 교사 모델 읽기 후 따라 읽기와 짧은 문단 반복 읽기를 권장합니다.",
+  },
+  {
+    id: "sample-002",
+    studentName: "이서연",
+    gradeClass: "4학년 / 1반",
+    testDate: "2026-06-06",
+    passageTitle: "작은 씨앗",
+    readingSpeed: {
+      syllablesPerMinute: 241,
+      wordsPerMinute: 58,
+    },
+    finalScore: {
+      score: 74,
+      band: "보통",
+    },
+    majorErrorTypes: ["누락", "삽입"],
+    analysisRows: [
+      ["학생 이름", "이서연"],
+      ["학년/반", "4학년 / 1반"],
+      ["검사 날짜", "2026-06-06"],
+      ["읽기 자료", "작은 씨앗"],
+      ["읽기 속도", "241 음절/분 · 58 어절/분"],
+      ["최종 점수", "74점 (보통)"],
+      ["주요 오류 유형", "누락, 삽입"],
+    ],
+    reportText:
+      "학생 기본 정보\n- 이서연, 4학년 / 1반\n\n읽기 속도 결과\n- 241 음절/분, 58 어절/분\n\n주요 오류 유형\n- 누락과 삽입 오류가 예시로 표시됩니다.\n\n유창성 수준 요약\n- 속도와 정확도를 함께 끌어올리는 지도가 필요합니다.\n\n강점\n- 문장 단위 읽기 활동에 참여할 수 있습니다.\n\n보완이 필요한 점\n- 줄 따라 읽기와 어절 확인 전략이 필요합니다.\n\n지도 제안\n- 손가락 짚기, 핵심 어휘 확인, 짧은 문장 재읽기를 권장합니다.",
+  },
+];
 
 let currentTeacher = null;
 let savedResults = [];
 
 if (auth) {
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, (user) => {
     if (!user) {
       window.location.href = "./index.html";
       return;
@@ -41,8 +89,8 @@ if (auth) {
     currentTeacher = user;
     elements.authGate.classList.add("hidden");
     elements.dashboardContent.classList.remove("hidden");
-    elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정의 저장 결과`;
-    await loadResults();
+    elements.teacherInfo.textContent = `${user.displayName || user.email} 교사 계정`;
+    loadResults();
   });
 } else {
   window.location.href = "./index.html";
@@ -53,38 +101,28 @@ elements.logoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
 
-elements.refreshBtn.addEventListener("click", loadResults);
 elements.studentFilter.addEventListener("input", renderDashboard);
 elements.dateFilter.addEventListener("change", renderDashboard);
 elements.closeDetailBtn.addEventListener("click", () => {
   elements.detailPanel.classList.add("hidden");
-  elements.detailContent.replaceChildren();
+  elements.detailAnalysisTableBody.replaceChildren();
+  elements.detailReportText.value = "";
 });
 
-async function loadResults() {
+function loadResults() {
   if (!currentTeacher) return;
 
-  elements.resultsTableBody.replaceChildren();
-  elements.emptyState.textContent = "저장 결과를 불러오는 중입니다.";
-  elements.emptyState.classList.remove("hidden");
-
-  const resultQuery = query(
-    collection(db, RESULTS_COLLECTION),
-    where("teacherUid", "==", currentTeacher.uid),
-  );
-  const snapshot = await getDocs(resultQuery);
-
-  savedResults = snapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .sort((left, right) => getSortableDate(right) - getSortableDate(left));
-
+  savedResults = getMonitorResults();
   renderDashboard();
 }
 
+function getMonitorResults() {
+  // Firestore 조회는 추후 이 함수 내부에서 연결합니다.
+  return [...sampleMonitorResults];
+}
+
 function renderDashboard() {
-  const filteredResults = getFilteredResults();
-  renderStats(filteredResults);
-  renderTable(filteredResults);
+  renderTable(getFilteredResults());
 }
 
 function getFilteredResults() {
@@ -92,12 +130,9 @@ function getFilteredResults() {
   const date = elements.dateFilter.value;
 
   return savedResults.filter((result) => {
-    const student = result.student || {};
     const studentText = [
-      student.name,
-      student.studentId,
-      student.grade,
-      student.className,
+      result.studentName,
+      result.gradeClass,
       result.passageTitle,
     ]
       .filter(Boolean)
@@ -110,28 +145,9 @@ function getFilteredResults() {
   });
 }
 
-function renderStats(results) {
-  const studentKeys = new Set(
-    results.map((result) => {
-      const student = result.student || {};
-      return student.studentId || `${student.name}-${student.grade}-${student.className}`;
-    }),
-  );
-  const scores = results
-    .map((result) => Number(result.finalScore?.score))
-    .filter((score) => Number.isFinite(score));
-  const average = scores.length
-    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-    : null;
-
-  elements.totalCount.textContent = String(results.length);
-  elements.studentCount.textContent = String(studentKeys.size);
-  elements.averageScore.textContent = average === null ? "-" : `${average}점`;
-}
-
 function renderTable(results) {
   elements.emptyState.classList.toggle("hidden", results.length > 0);
-  elements.emptyState.textContent = "저장된 분석 결과가 없습니다.";
+  elements.emptyState.textContent = "검색 조건에 맞는 검사 결과가 없습니다.";
 
   if (results.length === 0) {
     elements.resultsTableBody.replaceChildren();
@@ -141,15 +157,12 @@ function renderTable(results) {
   elements.resultsTableBody.replaceChildren(
     ...results.map((result) => {
       const row = document.createElement("tr");
-      const student = result.student || {};
       const cells = [
+        result.studentName || "-",
         result.testDate || "-",
-        formatStudentName(student),
-        [student.grade, student.className].filter(Boolean).join(" / ") || "-",
         formatReadingSpeed(result.readingSpeed),
-        `${result.errorAnalysis?.accuracyPercent ?? "-"}%`,
         `${result.finalScore?.score ?? "-"}점`,
-        formatErrorSummary(result.errorAnalysis?.counts),
+        result.majorErrorTypes?.join(", ") || "-",
       ];
 
       cells.forEach((value) => {
@@ -162,7 +175,7 @@ function renderTable(results) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "text-button";
-      button.textContent = "보기";
+      button.textContent = "상세 보기";
       button.addEventListener("click", () => showDetail(result));
       actionCell.append(button);
       row.append(actionCell);
@@ -173,62 +186,24 @@ function renderTable(results) {
 }
 
 function showDetail(result) {
-  const student = result.student || {};
   elements.detailPanel.classList.remove("hidden");
-  elements.detailContent.replaceChildren(
-    createDetailBlock("학생", formatStudentName(student)),
-    createDetailBlock("검사일", result.testDate || "-"),
-    createDetailBlock("읽기 자료", result.passageTitle || "제목 없음"),
-    createDetailBlock("읽기 속도", formatReadingSpeed(result.readingSpeed)),
-    createDetailBlock("오류 요약", formatErrorSummary(result.errorAnalysis?.counts)),
-    createDetailBlock("최종 점수", `${result.finalScore?.score ?? "-"}점 (${result.finalScore?.band || "-"})`),
-    createDetailBlock("보고서", result.report || "저장된 보고서가 없습니다.", true),
-    createDetailBlock("전사 텍스트", result.transcriptText || "-", true),
+  elements.detailAnalysisTableBody.replaceChildren(
+    ...result.analysisRows.map(([label, value]) => {
+      const row = document.createElement("tr");
+      const header = document.createElement("th");
+      const cell = document.createElement("td");
+      header.textContent = label;
+      cell.textContent = value;
+      row.append(header, cell);
+      return row;
+    }),
   );
+  elements.detailReportText.value = result.reportText;
   elements.detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function createDetailBlock(label, value, preserveLineBreaks = false) {
-  const wrapper = document.createElement("article");
-  const title = document.createElement("h3");
-  const content = document.createElement("p");
-
-  wrapper.className = "detail-block";
-  title.textContent = label;
-  content.textContent = value;
-  if (preserveLineBreaks) {
-    content.className = "pre-line";
-  }
-
-  wrapper.append(title, content);
-  return wrapper;
-}
-
-function formatStudentName(student) {
-  return [student.name, student.studentId ? `ID ${student.studentId}` : ""].filter(Boolean).join(" · ") || "-";
-}
-
 function formatReadingSpeed(readingSpeed = {}) {
-  const cpm = readingSpeed.cpm ?? "-";
-  const wpm = readingSpeed.wpm ?? "-";
-  return `${cpm} 글자/분 · ${wpm} 어절/분`;
-}
-
-function formatErrorSummary(counts = {}) {
-  return [
-    `누락 ${counts.omission ?? 0}`,
-    `삽입 ${counts.insertion ?? 0}`,
-    `대치 ${counts.substitution ?? 0}`,
-    `반복 ${counts.repetition ?? 0}`,
-  ].join(" · ");
-}
-
-function getSortableDate(result) {
-  if (result.createdAt?.toMillis) {
-    return result.createdAt.toMillis();
-  }
-  if (result.testDate) {
-    return new Date(result.testDate).getTime();
-  }
-  return 0;
+  const syllablesPerMinute = readingSpeed.syllablesPerMinute ?? readingSpeed.cpm ?? "-";
+  const wordsPerMinute = readingSpeed.wordsPerMinute ?? readingSpeed.wpm ?? "-";
+  return `${syllablesPerMinute} 음절/분 · ${wordsPerMinute} 어절/분`;
 }
