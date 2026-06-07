@@ -211,7 +211,8 @@ function runAnalysis() {
   try {
     const input = collectAssessmentInput();
     analysisResult = analyzeReading(input);
-    renderAnalysis(analysisResult);
+    renderAnalysisTable(analysisResult);
+    renderReport(analysisResult.report);
     elements.resultsPanel.classList.remove("hidden");
     elements.saveResultBtn.disabled = false;
     elements.analysisStatus.textContent = "분석 결과가 생성되었습니다. 필요하면 보고서를 수정한 뒤 저장하세요.";
@@ -303,7 +304,71 @@ function collectAssessmentInput() {
   };
 }
 
+function analyzeReadingText(text) {
+  const normalizedText = normalizeWhitespace(text);
+  const tokens = tokenizeEojeol(normalizedText);
+  const repetitions = detectRepetitions(tokens);
+  const repeatedExamples = getUniqueValues(repetitions.map((item) => item.transcript)).slice(0, 3);
+
+  return {
+    source: "temporary-local-analysis",
+    summary:
+      "현재는 OpenAI API를 호출하지 않고 브라우저에서 계산한 임시 분석 결과입니다. 추후 서버 함수에서 OpenAI 분석 결과로 교체할 수 있습니다.",
+    tokenCount: tokens.length,
+    characterCount: countReadableCharacters(normalizedText),
+    errorTypes: [
+      {
+        type: "repetition",
+        label: "반복",
+        count: repetitions.length,
+        examples: repeatedExamples,
+        interpretation: "같은 어절이 연속으로 반복된 경우를 임시로 감지했습니다.",
+      },
+      {
+        type: "substitution",
+        label: "대치/발음 오류",
+        count: 0,
+        examples: [],
+        interpretation: "정밀한 발음 및 대치 오류는 추후 OpenAI 분석 함수에서 판별할 예정입니다.",
+      },
+      {
+        type: "omission",
+        label: "누락",
+        count: 0,
+        examples: [],
+        interpretation: "원문 대비 누락 오류는 원문 비교 또는 추후 OpenAI 분석 결과와 함께 판별합니다.",
+      },
+      {
+        type: "insertion",
+        label: "삽입",
+        count: 0,
+        examples: [],
+        interpretation: "원문에 없는 어절 삽입 여부는 원문 비교 또는 추후 OpenAI 분석 결과와 함께 판별합니다.",
+      },
+    ],
+  };
+}
+
+function calculateReadingSpeed(text, readingTime) {
+  const durationSec = Number(readingTime);
+  const safeDurationSec = durationSec > 0 ? durationSec : 1;
+  const words = tokenizeEojeol(text);
+  const readableCharacters = countReadableCharacters(text);
+  const charactersPerMinute = Math.round((readableCharacters / safeDurationSec) * 60);
+  const wordsPerMinute = Math.round((words.length / safeDurationSec) * 60);
+
+  return {
+    readableCharacters,
+    wordCount: words.length,
+    syllablesPerMinute: charactersPerMinute,
+    wordsPerMinute,
+    cpm: charactersPerMinute,
+    wpm: wordsPerMinute,
+  };
+}
+
 function analyzeReading(input) {
+  const textAnalysis = analyzeReadingText(input.transcriptText);
   const referenceTokens = tokenizeEojeol(input.passageText);
   const transcriptTokens = tokenizeEojeol(input.transcriptText);
   const alignment = alignTokens(referenceTokens, transcriptTokens);
@@ -320,10 +385,11 @@ function analyzeReading(input) {
 
   const referenceCount = referenceTokens.length;
   const transcriptCount = transcriptTokens.length;
-  const charactersRead = countReadableCharacters(input.transcriptText);
   const referenceCharacters = countReadableCharacters(input.passageText);
-  const cpm = Math.round((charactersRead / input.durationSec) * 60);
-  const wpm = Math.round((transcriptCount / input.durationSec) * 60);
+  const readingSpeed = calculateReadingSpeed(input.transcriptText, input.durationSec);
+  const charactersRead = readingSpeed.readableCharacters;
+  const cpm = readingSpeed.syllablesPerMinute;
+  const wpm = readingSpeed.wordsPerMinute;
   const accuracyPercent = referenceCount
     ? roundToOne((counts.match / referenceCount) * 100)
     : 0;
@@ -338,24 +404,26 @@ function analyzeReading(input) {
   const errorDetails = alignment.operations
     .filter((operation) => operation.type !== "match")
     .concat(repetitions);
+  const errorSummaryRows = buildErrorSummaryRows(counts, errorDetails, textAnalysis);
 
   const result = {
     ...input,
     readingSpeed: {
+      ...readingSpeed,
       referenceCharacters,
       charactersRead,
       referenceWordCount: referenceCount,
       transcriptWordCount: transcriptCount,
-      cpm,
-      wpm,
       targetCpm: input.targetCpm,
     },
     errorAnalysis: {
+      textAnalysis,
       counts,
       accuracyPercent,
       completenessPercent,
       totalErrors: counts.omission + counts.insertion + counts.substitution + counts.repetition,
       details: errorDetails,
+      summaryRows: errorSummaryRows,
     },
     finalScore: {
       score,
@@ -364,7 +432,7 @@ function analyzeReading(input) {
     },
   };
 
-  result.report = generateReport(result);
+  result.report = generateReadingReport(result);
   return result;
 }
 
@@ -456,19 +524,85 @@ function detectRepetitions(tokens) {
   return repetitions;
 }
 
-function renderAnalysis(result) {
+function buildErrorSummaryRows(counts, details, textAnalysis) {
+  const temporaryRows = new Map(
+    textAnalysis.errorTypes.map((errorType) => [
+      errorType.type,
+      {
+        label: errorType.label,
+        count: errorType.count,
+        examples: errorType.examples,
+        interpretation: errorType.interpretation,
+      },
+    ]),
+  );
+  const rowDefinitions = [
+    {
+      type: "omission",
+      label: "누락",
+      interpretation: "원문에 있는 어절을 읽지 않았거나 전사에서 빠진 것으로 해석할 수 있습니다.",
+    },
+    {
+      type: "insertion",
+      label: "삽입",
+      interpretation: "원문에는 없는 어절이 전사에 추가된 것으로 해석할 수 있습니다.",
+    },
+    {
+      type: "substitution",
+      label: "대치/발음 오류",
+      interpretation: "원문 어절과 다른 어절로 읽힌 부분입니다. 발음 오류 여부는 추후 OpenAI 분석으로 보완합니다.",
+    },
+    {
+      type: "repetition",
+      label: "반복",
+      interpretation: "같은 어절을 반복해서 읽은 부분입니다. 호흡 단위와 읽기 안정성을 함께 살펴봅니다.",
+    },
+  ];
+
+  return rowDefinitions.map((definition) => {
+    const temporaryRow = temporaryRows.get(definition.type);
+    const examples = getErrorExamples(details, definition.type);
+
+    return {
+      type: definition.type,
+      label: definition.label,
+      count: counts[definition.type] ?? temporaryRow?.count ?? 0,
+      examples: examples.length ? examples : temporaryRow?.examples || [],
+      interpretation: definition.interpretation,
+    };
+  });
+}
+
+function getErrorExamples(details, type) {
+  const examples = details
+    .filter((detail) => detail.type === type)
+    .map((detail) => {
+      if (detail.reference && detail.transcript) {
+        return `${detail.reference} -> ${detail.transcript}`;
+      }
+      return detail.reference || detail.transcript || "";
+    })
+    .filter(Boolean);
+
+  return getUniqueValues(examples).slice(0, 3);
+}
+
+function renderAnalysisTable(analysisResult) {
   const summaryRows = [
-    ["학생", formatStudent(result.student)],
-    ["검사 날짜", result.testDate],
-    ["읽기 자료", result.passageTitle || "제목 없음"],
-    ["원문 글자 수", `${result.readingSpeed.referenceCharacters}자`],
-    ["전사 글자 수", `${result.readingSpeed.charactersRead}자`],
-    ["읽기 시간", `${result.durationSec}초`],
-    ["읽기 속도", `${result.readingSpeed.cpm} 글자/분, ${result.readingSpeed.wpm} 어절/분`],
-    ["정확도", `${result.errorAnalysis.accuracyPercent}%`],
-    ["완독률", `${result.errorAnalysis.completenessPercent}%`],
-    ["오류 합계", `${result.errorAnalysis.totalErrors}개`],
-    ["최종 점수", `${result.finalScore.score}점 (${result.finalScore.band})`],
+    ["학생", formatStudent(analysisResult.student)],
+    ["검사 날짜", analysisResult.testDate],
+    ["읽기 자료", analysisResult.passageTitle || "제목 없음"],
+    ["원문 글자 수", `${analysisResult.readingSpeed.referenceCharacters}자`],
+    ["전사 글자 수", `${analysisResult.readingSpeed.charactersRead}자`],
+    ["읽기 시간", `${analysisResult.durationSec}초`],
+    [
+      "읽기 속도",
+      `${analysisResult.readingSpeed.syllablesPerMinute} 음절/분, ${analysisResult.readingSpeed.wordsPerMinute} 어절/분`,
+    ],
+    ["정확도", `${analysisResult.errorAnalysis.accuracyPercent}%`],
+    ["완독률", `${analysisResult.errorAnalysis.completenessPercent}%`],
+    ["오류 합계", `${analysisResult.errorAnalysis.totalErrors}개`],
+    ["최종 점수", `${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`],
   ];
 
   elements.summaryTableBody.replaceChildren(
@@ -483,44 +617,42 @@ function renderAnalysis(result) {
     }),
   );
 
-  if (result.errorAnalysis.details.length === 0) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = 4;
-    cell.textContent = "감지된 오류가 없습니다.";
-    row.append(cell);
-    elements.errorTableBody.replaceChildren(row);
-  } else {
-    elements.errorTableBody.replaceChildren(
-      ...result.errorAnalysis.details.map((detail) => {
-        const row = document.createElement("tr");
-        [getErrorLabel(detail.type), detail.reference || "-", detail.transcript || "-", getErrorPosition(detail)]
-          .forEach((value) => {
-            const cell = document.createElement("td");
-            cell.textContent = value;
-            row.append(cell);
-          });
-        return row;
-      }),
-    );
-  }
+  elements.errorTableBody.replaceChildren(
+    ...analysisResult.errorAnalysis.summaryRows.map((errorRow) => {
+      const row = document.createElement("tr");
+      [
+        errorRow.label,
+        `${errorRow.count}회`,
+        errorRow.examples.length ? errorRow.examples.join(", ") : "-",
+        errorRow.interpretation,
+      ].forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.append(cell);
+      });
+      return row;
+    }),
+  );
 
-  elements.scoreBadge.textContent = `${result.finalScore.score}점`;
-  elements.reportText.value = result.report;
+  elements.scoreBadge.textContent = `${analysisResult.finalScore.score}점`;
 }
 
-function generateReport(result) {
-  const { counts } = result.errorAnalysis;
+function renderReport(reportText) {
+  elements.reportText.value = reportText;
+}
+
+function generateReadingReport(analysisResult) {
+  const { counts } = analysisResult.errorAnalysis;
 
   return [
-    `${result.student.name} 학생의 문단글 읽기 유창성 검사 결과입니다.`,
+    `${analysisResult.student.name} 학생의 문단글 읽기 유창성 검사 결과 예시 보고서입니다.`,
     "",
-    `검사일: ${result.testDate}`,
-    `읽기 자료: ${result.passageTitle || "제목 없음"}`,
-    `읽기 속도: ${result.readingSpeed.cpm} 글자/분 (${result.readingSpeed.wpm} 어절/분)`,
-    `정확도: ${result.errorAnalysis.accuracyPercent}%`,
-    `완독률: ${result.errorAnalysis.completenessPercent}%`,
-    `최종 점수: ${result.finalScore.score}점 (${result.finalScore.band})`,
+    `검사일: ${analysisResult.testDate}`,
+    `읽기 자료: ${analysisResult.passageTitle || "제목 없음"}`,
+    `읽기 속도: ${analysisResult.readingSpeed.syllablesPerMinute} 음절/분 (${analysisResult.readingSpeed.wordsPerMinute} 어절/분)`,
+    `정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
+    `완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
+    `최종 점수: ${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`,
     "",
     "오류 유형 요약",
     `- 누락: ${counts.omission}개`,
@@ -528,7 +660,10 @@ function generateReport(result) {
     `- 대치: ${counts.substitution}개`,
     `- 반복: ${counts.repetition}개`,
     "",
-    buildRecommendation(result),
+    "현재 보고서는 프론트엔드 임시 분석 결과를 바탕으로 생성되었습니다.",
+    "추후 Firebase Functions 같은 서버 환경에서 OpenAI 분석 결과를 받아 더 정교한 보고서로 교체할 수 있습니다.",
+    "",
+    buildRecommendation(analysisResult),
   ].join("\n");
 }
 
@@ -654,6 +789,10 @@ function clamp(value, min, max) {
 
 function roundToOne(value) {
   return Math.round(value * 10) / 10;
+}
+
+function getUniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function getScoreBand(score) {
