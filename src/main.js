@@ -1,13 +1,8 @@
-import { auth, db, RESULTS_COLLECTION } from "./firebaseConfig.js";
+import { auth } from "./firebaseConfig.js";
 import {
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-} from "firebase/firestore";
 
 const elements = {
   authGate: document.querySelector("#authGate"),
@@ -221,7 +216,7 @@ function runAnalysis() {
   }
 }
 
-async function saveAnalysisResult() {
+function saveAnalysisResult() {
   if (!currentTeacher) {
     elements.analysisStatus.textContent = "교사 로그인이 필요합니다.";
     return;
@@ -238,30 +233,21 @@ async function saveAnalysisResult() {
   const payload = {
     teacherUid: currentTeacher.uid,
     teacherEmail: currentTeacher.email || "",
-    teacherName: currentTeacher.displayName || "",
-    student: analysisResult.student,
+    studentName: analysisResult.student.name,
+    gradeClass: [analysisResult.student.grade, analysisResult.student.className].filter(Boolean).join(" / "),
     testDate: analysisResult.testDate,
     passageTitle: analysisResult.passageTitle,
-    passageText: analysisResult.passageText,
     transcriptText: analysisResult.transcriptText,
-    durationSec: analysisResult.durationSec,
     readingSpeed: analysisResult.readingSpeed,
     errorAnalysis: analysisResult.errorAnalysis,
     finalScore: analysisResult.finalScore,
-    report: elements.reportText.value,
-    createdAt: serverTimestamp(),
+    reportText: elements.reportText.value,
+    createdAt: new Date().toISOString(),
   };
 
-  try {
-    elements.saveResultBtn.disabled = true;
-    elements.analysisStatus.textContent = "Firebase에 분석 결과를 저장하는 중입니다.";
-    await addDoc(collection(db, RESULTS_COLLECTION), payload);
-    elements.analysisStatus.textContent =
-      "저장되었습니다. 녹음 원본 파일은 Firebase에 저장하지 않았습니다.";
-  } catch (error) {
-    elements.saveResultBtn.disabled = false;
-    elements.analysisStatus.textContent = `저장 실패: ${error.message}`;
-  }
+  console.log("Firestore 저장 예정 데이터", payload);
+  elements.analysisStatus.textContent =
+    "저장 예정 데이터를 콘솔에 출력했습니다. 추후 Firestore 저장으로 연결할 예정입니다.";
 }
 
 function collectAssessmentInput() {
