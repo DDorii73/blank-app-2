@@ -541,21 +541,25 @@ function buildErrorSummaryRows(counts, details, textAnalysis) {
       type: "omission",
       label: "누락",
       interpretation: "원문에 있는 어절을 읽지 않았거나 전사에서 빠진 것으로 해석할 수 있습니다.",
+      guidance: "짧은 문장부터 손가락 짚기, 줄 따라 읽기, 핵심 어절 확인 활동을 진행합니다.",
     },
     {
       type: "insertion",
       label: "삽입",
       interpretation: "원문에는 없는 어절이 전사에 추가된 것으로 해석할 수 있습니다.",
+      guidance: "읽기 전 원문을 훑어보고 문장 단위로 멈추어 확인하는 연습을 제공합니다.",
     },
     {
       type: "substitution",
       label: "대치/발음 오류",
       interpretation: "원문 어절과 다른 어절로 읽힌 부분입니다. 발음 오류 여부는 추후 OpenAI 분석으로 보완합니다.",
+      guidance: "자주 바뀌는 어휘를 표시하고 교사 모델 읽기 후 따라 읽기와 재읽기를 실시합니다.",
     },
     {
       type: "repetition",
       label: "반복",
       interpretation: "같은 어절을 반복해서 읽은 부분입니다. 호흡 단위와 읽기 안정성을 함께 살펴봅니다.",
+      guidance: "의미 단위로 끊어 읽기, 호흡 조절, 일정한 속도의 반복 읽기를 지도합니다.",
     },
   ];
 
@@ -569,6 +573,7 @@ function buildErrorSummaryRows(counts, details, textAnalysis) {
       count: counts[definition.type] ?? temporaryRow?.count ?? 0,
       examples: examples.length ? examples : temporaryRow?.examples || [],
       interpretation: definition.interpretation,
+      guidance: definition.guidance,
     };
   });
 }
@@ -625,6 +630,7 @@ function renderAnalysisTable(analysisResult) {
         `${errorRow.count}회`,
         errorRow.examples.length ? errorRow.examples.join(", ") : "-",
         errorRow.interpretation,
+        errorRow.guidance,
       ].forEach((value) => {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -642,28 +648,55 @@ function renderReport(reportText) {
 }
 
 function generateReadingReport(analysisResult) {
-  const { counts } = analysisResult.errorAnalysis;
+  const { counts, summaryRows } = analysisResult.errorAnalysis;
+  const studentInfo = formatStudent(analysisResult.student);
+  const primaryErrors = summaryRows
+    .filter((row) => row.count > 0)
+    .sort((left, right) => right.count - left.count);
+  const primaryErrorSummary = primaryErrors.length
+    ? primaryErrors.map((row) => `${row.label} ${row.count}회`).join(", ")
+    : "두드러진 오류 유형이 뚜렷하게 나타나지 않았습니다.";
+  const strengths = getReportStrengths(analysisResult);
+  const needs = getReportNeeds(analysisResult, primaryErrors);
+  const guidance = getReportGuidance(analysisResult, primaryErrors);
 
   return [
-    `${analysisResult.student.name} 학생의 문단글 읽기 유창성 검사 결과 예시 보고서입니다.`,
+    "학생 개별 읽기 유창성 보고서 예시",
     "",
-    `검사일: ${analysisResult.testDate}`,
-    `읽기 자료: ${analysisResult.passageTitle || "제목 없음"}`,
-    `읽기 속도: ${analysisResult.readingSpeed.syllablesPerMinute} 음절/분 (${analysisResult.readingSpeed.wordsPerMinute} 어절/분)`,
-    `정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
-    `완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
-    `최종 점수: ${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`,
+    "1. 학생 기본 정보",
+    `- 학생: ${studentInfo}`,
+    `- 검사일: ${analysisResult.testDate}`,
+    `- 읽기 자료: ${analysisResult.passageTitle || "제목 없음"}`,
     "",
-    "오류 유형 요약",
+    "2. 읽기 속도 결과",
+    `- 읽기 시간: ${analysisResult.durationSec}초`,
+    `- 분당 음절 수: ${analysisResult.readingSpeed.syllablesPerMinute} 음절/분`,
+    `- 분당 어절 수: ${analysisResult.readingSpeed.wordsPerMinute} 어절/분`,
+    `- 목표 속도 대비 점수: ${analysisResult.finalScore.speedScore}점`,
+    "",
+    "3. 주요 오류 유형",
+    `- 주요 오류: ${primaryErrorSummary}`,
     `- 누락: ${counts.omission}개`,
     `- 삽입: ${counts.insertion}개`,
     `- 대치: ${counts.substitution}개`,
     `- 반복: ${counts.repetition}개`,
     "",
-    "현재 보고서는 프론트엔드 임시 분석 결과를 바탕으로 생성되었습니다.",
-    "추후 Firebase Functions 같은 서버 환경에서 OpenAI 분석 결과를 받아 더 정교한 보고서로 교체할 수 있습니다.",
+    "4. 유창성 수준 요약",
+    `- 최종 점수: ${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`,
+    `- 정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
+    `- 완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
+    "- 현재 단계에서는 프론트엔드 임시 분석 결과를 바탕으로 한 예시 요약입니다.",
     "",
-    buildRecommendation(analysisResult),
+    "5. 강점",
+    ...strengths.map((item) => `- ${item}`),
+    "",
+    "6. 보완이 필요한 점",
+    ...needs.map((item) => `- ${item}`),
+    "",
+    "7. 지도 제안",
+    ...guidance.map((item) => `- ${item}`),
+    "",
+    "※ 추후 Firebase Functions 같은 서버 환경에서 OpenAI 분석 결과를 받아 더 정교한 보고서로 교체할 수 있습니다.",
   ].join("\n");
 }
 
@@ -689,6 +722,56 @@ function buildRecommendation(result) {
   }
 
   return recommendations.join("\n");
+}
+
+function getReportStrengths(result) {
+  const strengths = [];
+
+  if (result.errorAnalysis.accuracyPercent >= 90) {
+    strengths.push("전사 텍스트 기준으로 원문과 일치하는 어절 비율이 높아 정확성이 안정적입니다.");
+  }
+  if (result.readingSpeed.syllablesPerMinute >= result.readingSpeed.targetCpm * 0.8) {
+    strengths.push("목표 읽기 속도에 비교적 근접하여 문단글을 일정한 속도로 읽는 기반이 보입니다.");
+  }
+  if (result.errorAnalysis.counts.repetition === 0) {
+    strengths.push("반복 오류가 두드러지지 않아 읽기 흐름이 비교적 안정적으로 나타납니다.");
+  }
+
+  if (strengths.length === 0) {
+    strengths.push("검사 자료를 끝까지 읽고 전사 자료를 바탕으로 현재 읽기 특성을 확인할 수 있었습니다.");
+  }
+
+  return strengths;
+}
+
+function getReportNeeds(result, primaryErrors) {
+  const needs = [];
+
+  if (result.errorAnalysis.accuracyPercent < 90) {
+    needs.push("정확도 향상을 위해 원문 어휘와 전사 텍스트가 달라지는 부분을 함께 확인할 필요가 있습니다.");
+  }
+  if (result.readingSpeed.syllablesPerMinute < result.readingSpeed.targetCpm * 0.7) {
+    needs.push("읽기 속도가 목표치보다 낮아 짧은 문단의 반복 읽기와 시간 재기 활동이 필요합니다.");
+  }
+  if (primaryErrors.length > 0) {
+    needs.push(`${primaryErrors[0].label} 오류가 상대적으로 두드러져 해당 오류 유형에 대한 개별 지도가 필요합니다.`);
+  }
+
+  if (needs.length === 0) {
+    needs.push("현재 결과에서는 큰 보완점보다 다양한 글감에서 유창성을 유지하는 연습이 필요합니다.");
+  }
+
+  return needs;
+}
+
+function getReportGuidance(result, primaryErrors) {
+  const guidance = primaryErrors.length
+    ? primaryErrors.slice(0, 2).map((row) => row.guidance)
+    : [];
+
+  guidance.push(...buildRecommendation(result).split("\n"));
+
+  return getUniqueValues(guidance).slice(0, 4);
 }
 
 function extractTranscriptText(fileText, fileName) {
