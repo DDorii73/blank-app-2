@@ -27,7 +27,6 @@
       <section id="appContent" class="workspace hidden">
         <div class="teacher-strip">
           <span id="teacherInfo">교사 계정 확인 중</span>
-          <span>학생은 로그인하지 않습니다. 모든 기록은 현재 교사 계정에 연결됩니다.</span>
         </div>
 
         <form id="assessmentForm" class="form-grid">
@@ -67,8 +66,16 @@
           <section class="panel">
             <h2>2. 읽기 자료와 전사 텍스트</h2>
             <label>
+              문단글 원문 선택
+              <select id="passageSelect" required>
+                <option value="gimbap">1) 김밥만들기 - 1,2학년수준</option>
+                <option value="mountainSea">2) 산과 바다 - 3,4학년수준</option>
+                <option value="clothing">3) 의생활 - 5,6학년수준</option>
+              </select>
+            </label>
+            <label>
               교사가 제시한 문단글 원문
-              <textarea id="readingPassage" rows="8" placeholder="학생이 읽은 문단글 원문을 입력하세요." required></textarea>
+              <textarea id="readingPassage" rows="10" readonly required></textarea>
             </label>
             <div class="upload-row">
               <label class="file-label">

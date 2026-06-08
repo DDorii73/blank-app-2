@@ -17,6 +17,7 @@ const elements = {
   className: document.querySelector("#className"),
   testDate: document.querySelector("#testDate"),
   passageTitle: document.querySelector("#passageTitle"),
+  passageSelect: document.querySelector("#passageSelect"),
   readingPassage: document.querySelector("#readingPassage"),
   transcriptFile: document.querySelector("#transcriptFile"),
   loadTranscriptBtn: document.querySelector("#loadTranscriptBtn"),
@@ -38,6 +39,24 @@ const elements = {
   reportText: document.querySelector("#reportText"),
 };
 
+const PASSAGE_OPTIONS = {
+  gimbap: {
+    title: "김밥만들기",
+    level: "1,2학년수준",
+    text: "김밥을 만들기 위해 필요한 재료를 준비한다. 먼저 김을 깔고 밥을 잘 펴준다. 그리고 단무지와 살짝 볶은 오이와 당근을 길게 썰어 얹어준다. 햄도 볶아서 올리고 계란은 넓게 부친다. 계란이 익으면 칼로 썰어 얹어준다. 발로 터지지 않도록 잘 말아 손바닥으로 꼭꼭 눌러준다. 그리고 김밥을 도마 위에 올려놓고 칼로 한입크기로 썬다.",
+  },
+  mountainSea: {
+    title: "산과 바다",
+    level: "3,4학년수준",
+    text: "여름철이 되면 사람들은 여행을 가는데 어떤 사람들은 바다를 선호하고 어떤 사람들은 산을 선호한다. 산과 바다는 유사한 점과 차이점이 있어 사람들은 어디로 가야할지 고민한다.\n산과 바다의 유사한 점은 고된 일을 잊고 편안하게 쉴 수 있다는 것이다.\n그리고 산은 올라갈 때 미끄러지지 않게 조심해야 하고 바다는 물에 빠지지 않게 조심해야 한다는 주의점이 있는 것도 유사하다.\n산과 바다는 다른 점도 가지고 있는데 첫째, 산은 정상에 도착하기까지 올라가는 것이 힘들다. 그러나 바다는 바다를 바라보며 천천히 걸을 수 있어 힘이 들지 않는다. 그리고 산은 나무를 볼 수 있고 바다는 푸른 바다를 볼 수 있다는 것이 다르다. 또 산에서는 산새들과 곤충들을 볼 수 있고 바다에서는 갈매기와 바다생물들을 볼 수 있다는 것이 다르다.",
+  },
+  clothing: {
+    title: "의생활",
+    level: "5,6학년수준",
+    text: "우리들은 항상 의상을 입고 지내며 어떤 의상을 선택할지에 대해서도 중요하게 생각합니다. 이러한 의상은 나름대로의 특성들이 있으며 국가, 직업, 쓰임새에 따라서 분류해볼 수 있습니다.\n먼저 국가로 분류해보자면 사리, 한복, 기모노, 치파오 등의 나라를 대표하는 전통의상이 있습니다. 우리나라의 전통의상인 한복은 품이 큰 바지와 저고리, 치마로 된 색이 고운 의상이며 저고리는 옷고름을 이용하여 여미는 것이 특징입니다. 인도의 전통의상인 사리의 특징은 온몸을 덮을 만큼 큰 천으로 몸을 가리는 것이며, 일본의 전통의상인 기모노는 나누어지지 않은 큰 옷감으로 온몸을 감싼 후 허리를 매는 것이 특징입니다. 그리고 중국의 전통의상 치파오는 화려한 장식이 수놓아진 치마에 상의는 목까지 올라와 단추로 잠그는 것이 특징입니다.\n다음으로 직업으로 분류해보자면 요리사, 소방관, 경찰관 등의 사람들이 근무할 때 입는 의상으로 나눌 수 있습니다. 요리사는 요리를 할 때 몸에 붙어 있는 이물질이 요리에 들어가는 것을 방지하기 위해 가운을 입습니다. 소방관은 위험한 상황에 노출되어 있으며 화염 속에서 불이 몸에 붙는 것을 막기 위해 소방관복을 입어 몸을 화상으로부터 보호합니다. 마지막으로 경찰관은 사람들에게 범죄나 불법적인 일에 대한 경각심을 일으키기 위해 경찰복을 입어서 특별한 경찰관의 신분을 나타냅니다.\n마지막으로 쓰임새로 분류해보면 수영복, 우비, 웨딩드레스 등으로 나눌 수 있습니다. 우리는 수영을 할 때 물 속에서 저항을 줄이고 앞으로 나아가는 데 방해를 받지 않으려고 수영복을 입습니다. 비가 오는 날에는 우산을 써도 바람을 타고 들이치는 비를 막고 우산을 들지 않음으로써 보다 자유롭게 활동하기 위해 우비를 입습니다. 그리고 결혼을 할 때에는 순결하고 고귀함을 나타내기 위해 순백색의 웨딩드레스를 입습니다.\n위에서 우리는 의상을 나라, 직업, 쓰임새에 따라 분류해 보았습니다. 이렇게 의생활은 우리의 생활과 밀접하게 연결되어 있어 뗄 수 없으며 우리는 상황에 맞는 의상을 선택해서 입어야 합니다.",
+  },
+};
+
 let currentTeacher = null;
 let mediaRecorder = null;
 let mediaStream = null;
@@ -48,6 +67,7 @@ let recordingUrl = "";
 let analysisResult = null;
 
 elements.testDate.valueAsDate = new Date();
+applySelectedPassage();
 
 if (auth) {
   onAuthStateChanged(auth, (user) => {
@@ -73,6 +93,7 @@ elements.logoutBtn.addEventListener("click", async () => {
 elements.resetFormBtn.addEventListener("click", () => {
   elements.assessmentForm.reset();
   elements.testDate.valueAsDate = new Date();
+  applySelectedPassage();
   elements.resultsPanel.classList.add("hidden");
   elements.summaryTableBody.replaceChildren();
   elements.errorTableBody.replaceChildren();
@@ -83,6 +104,8 @@ elements.resetFormBtn.addEventListener("click", () => {
   analysisResult = null;
   clearRecording();
 });
+
+elements.passageSelect.addEventListener("change", applySelectedPassage);
 
 elements.loadTranscriptBtn.addEventListener("click", async () => {
   const file = elements.transcriptFile.files?.[0];
@@ -105,6 +128,12 @@ elements.stopRecordingBtn.addEventListener("click", stopRecording);
 elements.transcribeRecordingBtn.addEventListener("click", transcribeRecording);
 elements.analyzeBtn.addEventListener("click", runAnalysis);
 elements.saveResultBtn.addEventListener("click", saveAnalysisResult);
+
+function applySelectedPassage() {
+  const selectedPassage = PASSAGE_OPTIONS[elements.passageSelect.value] || PASSAGE_OPTIONS.gimbap;
+  elements.passageTitle.value = `${selectedPassage.title} (${selectedPassage.level})`;
+  elements.readingPassage.value = selectedPassage.text;
+}
 
 async function startRecording() {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
