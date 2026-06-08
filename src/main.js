@@ -412,14 +412,14 @@ function analyzeReading(input) {
     ? roundToOne(((counts.match + counts.substitution) / referenceCount) * 100)
     : 0;
   const speedScore = clamp((cpm / input.targetCpm) * 100, 0, 100);
-  const repetitionPenalty = Math.min(20, counts.repetition * 2);
-  const score = Math.round(
-    clamp(accuracyPercent * 0.65 + speedScore * 0.25 + completenessPercent * 0.1 - repetitionPenalty, 0, 100),
-  );
   const errorDetails = alignment.operations
     .filter((operation) => operation.type !== "match")
     .concat(repetitions);
   const errorSummaryRows = buildErrorSummaryRows(counts, errorDetails, textAnalysis);
+  const totalErrors = counts.omission + counts.insertion + counts.substitution + counts.repetition;
+  const scoreBase = referenceCharacters;
+  const errorPenalty = totalErrors;
+  const score = Math.max(scoreBase - errorPenalty, 0);
 
   const result = {
     ...input,
@@ -436,7 +436,7 @@ function analyzeReading(input) {
       counts,
       accuracyPercent,
       completenessPercent,
-      totalErrors: counts.omission + counts.insertion + counts.substitution + counts.repetition,
+      totalErrors,
       details: errorDetails,
       summaryRows: errorSummaryRows,
     },
@@ -444,6 +444,9 @@ function analyzeReading(input) {
       score,
       band: getScoreBand(score),
       speedScore: roundToOne(speedScore),
+      scoreBase,
+      errorPenalty,
+      scoringRule: "음절당 1점, 오류 1회당 -1점",
     },
   };
 
@@ -622,6 +625,11 @@ function renderAnalysisTable(analysisResult) {
     ["정확도", `${analysisResult.errorAnalysis.accuracyPercent}%`],
     ["완독률", `${analysisResult.errorAnalysis.completenessPercent}%`],
     ["오류 합계", `${analysisResult.errorAnalysis.totalErrors}개`],
+    ["채점 기준", analysisResult.finalScore.scoringRule],
+    [
+      "점수 산출",
+      `${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
+    ],
     ["최종 점수", `${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`],
   ];
 
@@ -697,6 +705,8 @@ function generateReadingReport(analysisResult) {
     `- 반복: ${counts.repetition}개`,
     "",
     "4. 유창성 수준 요약",
+    `- 채점 기준: ${analysisResult.finalScore.scoringRule}`,
+    `- 점수 산출: ${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
     `- 최종 점수: ${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`,
     `- 정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
     `- 완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
