@@ -311,7 +311,17 @@ function saveStudentDraft() {
 
   localStorage.setItem(draftKey, JSON.stringify(draft));
   console.log("학생별 임시저장 데이터", draft);
-  elements.analysisStatus.textContent = `${studentName} 학생의 임시저장 데이터를 브라우저에 저장했습니다.`;
+  const message = [
+    `${studentName} 학생의 임시저장이 완료되었습니다.`,
+    "",
+    "확인 위치:",
+    "현재 브라우저의 Local Storage에 저장됩니다.",
+    `저장 키: ${draftKey}`,
+    "",
+    "브라우저 개발자 도구 > Application > Local Storage에서 확인할 수 있습니다.",
+  ].join("\n");
+  elements.analysisStatus.textContent = `${studentName} 학생의 임시저장이 완료되었습니다. 브라우저 Local Storage에서 확인할 수 있습니다.`;
+  alert(message);
 }
 
 function collectAssessmentInput() {
