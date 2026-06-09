@@ -17,7 +17,7 @@ const elements = {
   className: document.querySelector("#className"),
   testDate: document.querySelector("#testDate"),
   passageTitle: document.querySelector("#passageTitle"),
-  passageSelect: document.querySelector("#passageSelect"),
+  passageTabs: document.querySelectorAll(".passage-tab"),
   readingPassage: document.querySelector("#readingPassage"),
   transcriptFile: document.querySelector("#transcriptFile"),
   loadTranscriptBtn: document.querySelector("#loadTranscriptBtn"),
@@ -28,9 +28,9 @@ const elements = {
   recordingPlayer: document.querySelector("#recordingPlayer"),
   recordingStatus: document.querySelector("#recordingStatus"),
   durationSec: document.querySelector("#durationSec"),
-  targetCpm: document.querySelector("#targetCpm"),
   analyzeBtn: document.querySelector("#analyzeBtn"),
   saveResultBtn: document.querySelector("#saveResultBtn"),
+  tempSaveBtn: document.querySelector("#tempSaveBtn"),
   analysisStatus: document.querySelector("#analysisStatus"),
   resultsPanel: document.querySelector("#resultsPanel"),
   scoreBadge: document.querySelector("#scoreBadge"),
@@ -65,6 +65,7 @@ let recordingStartedAt = 0;
 let recordedBlob = null;
 let recordingUrl = "";
 let analysisResult = null;
+let selectedPassageKey = "gimbap";
 
 elements.testDate.valueAsDate = new Date();
 applySelectedPassage();
@@ -93,6 +94,7 @@ elements.logoutBtn.addEventListener("click", async () => {
 elements.resetFormBtn.addEventListener("click", () => {
   elements.assessmentForm.reset();
   elements.testDate.valueAsDate = new Date();
+  selectedPassageKey = "gimbap";
   applySelectedPassage();
   elements.resultsPanel.classList.add("hidden");
   elements.summaryTableBody.replaceChildren();
@@ -105,7 +107,12 @@ elements.resetFormBtn.addEventListener("click", () => {
   clearRecording();
 });
 
-elements.passageSelect.addEventListener("change", applySelectedPassage);
+elements.passageTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    selectedPassageKey = tab.dataset.passage;
+    applySelectedPassage();
+  });
+});
 
 elements.loadTranscriptBtn.addEventListener("click", async () => {
   const file = elements.transcriptFile.files?.[0];
@@ -128,11 +135,17 @@ elements.stopRecordingBtn.addEventListener("click", stopRecording);
 elements.transcribeRecordingBtn.addEventListener("click", transcribeRecording);
 elements.analyzeBtn.addEventListener("click", runAnalysis);
 elements.saveResultBtn.addEventListener("click", saveAnalysisResult);
+elements.tempSaveBtn.addEventListener("click", saveStudentDraft);
 
 function applySelectedPassage() {
-  const selectedPassage = PASSAGE_OPTIONS[elements.passageSelect.value] || PASSAGE_OPTIONS.gimbap;
+  const selectedPassage = PASSAGE_OPTIONS[selectedPassageKey] || PASSAGE_OPTIONS.gimbap;
   elements.passageTitle.value = `${selectedPassage.title} (${selectedPassage.level})`;
   elements.readingPassage.value = selectedPassage.text;
+  elements.passageTabs.forEach((tab) => {
+    const isActive = tab.dataset.passage === selectedPassageKey;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
 }
 
 async function startRecording() {
@@ -279,9 +292,35 @@ function saveAnalysisResult() {
     "저장 예정 데이터를 콘솔에 출력했습니다. 추후 Firestore 저장으로 연결할 예정입니다.";
 }
 
+function saveStudentDraft() {
+  const studentName = elements.studentName.value.trim() || "이름미입력";
+  const draftKey = [
+    "readingFluencyDraft",
+    currentTeacher?.uid || "guest",
+    elements.studentId.value.trim() || studentName,
+  ].join(":");
+  const draft = {
+    studentName,
+    studentId: elements.studentId.value.trim(),
+    grade: elements.grade.value.trim(),
+    className: elements.className.value.trim(),
+    testDate: elements.testDate.value,
+    passageKey: selectedPassageKey,
+    passageTitle: elements.passageTitle.value,
+    transcriptText: elements.transcriptText.value,
+    durationSec: elements.durationSec.value,
+    reportText: elements.reportText.value,
+    analysisResult,
+    savedAt: new Date().toISOString(),
+  };
+
+  localStorage.setItem(draftKey, JSON.stringify(draft));
+  console.log("학생별 임시저장 데이터", draft);
+  elements.analysisStatus.textContent = `${studentName} 학생의 임시저장 데이터를 브라우저에 저장했습니다.`;
+}
+
 function collectAssessmentInput() {
   const durationSec = Number(elements.durationSec.value);
-  const targetCpm = Number(elements.targetCpm.value || 300);
   const studentName = elements.studentName.value.trim();
   const testDate = elements.testDate.value;
   const passageText = normalizeWhitespace(elements.readingPassage.value);
@@ -315,7 +354,6 @@ function collectAssessmentInput() {
     passageText,
     transcriptText,
     durationSec,
-    targetCpm: targetCpm > 0 ? targetCpm : 300,
   };
 }
 
@@ -403,15 +441,12 @@ function analyzeReading(input) {
   const referenceCharacters = countReadableCharacters(input.passageText);
   const readingSpeed = calculateReadingSpeed(input.transcriptText, input.durationSec);
   const charactersRead = readingSpeed.readableCharacters;
-  const cpm = readingSpeed.syllablesPerMinute;
-  const wpm = readingSpeed.wordsPerMinute;
   const accuracyPercent = referenceCount
     ? roundToOne((counts.match / referenceCount) * 100)
     : 0;
   const completenessPercent = referenceCount
     ? roundToOne(((counts.match + counts.substitution) / referenceCount) * 100)
     : 0;
-  const speedScore = clamp((cpm / input.targetCpm) * 100, 0, 100);
   const errorDetails = alignment.operations
     .filter((operation) => operation.type !== "match")
     .concat(repetitions);
@@ -429,7 +464,6 @@ function analyzeReading(input) {
       charactersRead,
       referenceWordCount: referenceCount,
       transcriptWordCount: transcriptCount,
-      targetCpm: input.targetCpm,
     },
     errorAnalysis: {
       textAnalysis,
@@ -442,8 +476,6 @@ function analyzeReading(input) {
     },
     finalScore: {
       score,
-      band: getScoreBand(score),
-      speedScore: roundToOne(speedScore),
       scoreBase,
       errorPenalty,
       scoringRule: "음절당 1점, 오류 1회당 -1점",
@@ -630,7 +662,7 @@ function renderAnalysisTable(analysisResult) {
       "점수 산출",
       `${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
     ],
-    ["최종 점수", `${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`],
+    ["최종 점수", `${analysisResult.finalScore.score}점`],
   ];
 
   elements.summaryTableBody.replaceChildren(
@@ -695,7 +727,6 @@ function generateReadingReport(analysisResult) {
     `- 읽기 시간: ${analysisResult.durationSec}초`,
     `- 분당 음절 수: ${analysisResult.readingSpeed.syllablesPerMinute} 음절/분`,
     `- 분당 어절 수: ${analysisResult.readingSpeed.wordsPerMinute} 어절/분`,
-    `- 목표 속도 대비 점수: ${analysisResult.finalScore.speedScore}점`,
     "",
     "3. 주요 오류 유형",
     `- 주요 오류: ${primaryErrorSummary}`,
@@ -707,7 +738,7 @@ function generateReadingReport(analysisResult) {
     "4. 유창성 수준 요약",
     `- 채점 기준: ${analysisResult.finalScore.scoringRule}`,
     `- 점수 산출: ${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
-    `- 최종 점수: ${analysisResult.finalScore.score}점 (${analysisResult.finalScore.band})`,
+    `- 최종 점수: ${analysisResult.finalScore.score}점`,
     `- 정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
     `- 완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
     "- 현재 단계에서는 프론트엔드 임시 분석 결과를 바탕으로 한 예시 요약입니다.",
@@ -729,8 +760,8 @@ function buildRecommendation(result) {
   const { counts, accuracyPercent } = result.errorAnalysis;
   const recommendations = [];
 
-  if (result.readingSpeed.cpm < result.readingSpeed.targetCpm * 0.7) {
-    recommendations.push("읽기 속도가 목표치보다 낮아 짧은 문단의 반복 읽기와 시간 재기 활동이 도움이 됩니다.");
+  if (result.readingSpeed.syllablesPerMinute < 200) {
+    recommendations.push("읽기 속도가 낮게 나타나 짧은 문단의 반복 읽기와 시간 재기 활동이 도움이 됩니다.");
   }
   if (accuracyPercent < 90) {
     recommendations.push("정확도 향상을 위해 어려운 어휘를 사전에 확인하고 교사 모델 읽기 후 따라 읽기를 권장합니다.");
@@ -755,8 +786,8 @@ function getReportStrengths(result) {
   if (result.errorAnalysis.accuracyPercent >= 90) {
     strengths.push("전사 텍스트 기준으로 원문과 일치하는 어절 비율이 높아 정확성이 안정적입니다.");
   }
-  if (result.readingSpeed.syllablesPerMinute >= result.readingSpeed.targetCpm * 0.8) {
-    strengths.push("목표 읽기 속도에 비교적 근접하여 문단글을 일정한 속도로 읽는 기반이 보입니다.");
+  if (result.readingSpeed.syllablesPerMinute >= 200) {
+    strengths.push("문단글을 일정한 속도로 읽는 기반이 보입니다.");
   }
   if (result.errorAnalysis.counts.repetition === 0) {
     strengths.push("반복 오류가 두드러지지 않아 읽기 흐름이 비교적 안정적으로 나타납니다.");
@@ -775,8 +806,8 @@ function getReportNeeds(result, primaryErrors) {
   if (result.errorAnalysis.accuracyPercent < 90) {
     needs.push("정확도 향상을 위해 원문 어휘와 전사 텍스트가 달라지는 부분을 함께 확인할 필요가 있습니다.");
   }
-  if (result.readingSpeed.syllablesPerMinute < result.readingSpeed.targetCpm * 0.7) {
-    needs.push("읽기 속도가 목표치보다 낮아 짧은 문단의 반복 읽기와 시간 재기 활동이 필요합니다.");
+  if (result.readingSpeed.syllablesPerMinute < 200) {
+    needs.push("읽기 속도 향상을 위해 짧은 문단의 반복 읽기와 시간 재기 활동이 필요합니다.");
   }
   if (primaryErrors.length > 0) {
     needs.push(`${primaryErrors[0].label} 오류가 상대적으로 두드러져 해당 오류 유형에 대한 개별 지도가 필요합니다.`);
@@ -901,13 +932,6 @@ function roundToOne(value) {
 
 function getUniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
-}
-
-function getScoreBand(score) {
-  if (score >= 90) return "우수";
-  if (score >= 75) return "양호";
-  if (score >= 60) return "보통";
-  return "집중 지원 필요";
 }
 
 function getErrorLabel(type) {

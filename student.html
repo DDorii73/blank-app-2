@@ -33,7 +33,10 @@
           <section class="panel">
             <div class="panel-heading">
               <h2>1. 학생 정보</h2>
-              <button type="button" id="resetFormBtn" class="text-button">새 검사 입력</button>
+              <div class="action-row">
+                <button type="button" id="tempSaveBtn" class="secondary-button">학생별 임시저장</button>
+                <button type="button" id="resetFormBtn" class="text-button">새 검사 입력</button>
+              </div>
             </div>
             <div class="field-grid two-columns">
               <label>
@@ -56,25 +59,28 @@
                 검사 날짜
                 <input id="testDate" type="date" required />
               </label>
-              <label>
-                읽기 자료 제목
-                <input id="passageTitle" type="text" placeholder="예: 봄이 오는 길" />
-              </label>
+            </div>
+            <div class="passage-tabs-wrap">
+              <p class="field-title">읽기 자료 제목</p>
+              <div class="passage-tabs" role="tablist" aria-label="학년 수준별 읽기 자료 선택">
+                <button type="button" class="passage-tab active" data-passage="gimbap" role="tab" aria-selected="true">
+                  1,2학년수준<br /><strong>김밥만들기</strong>
+                </button>
+                <button type="button" class="passage-tab" data-passage="mountainSea" role="tab" aria-selected="false">
+                  3,4학년수준<br /><strong>산과 바다</strong>
+                </button>
+                <button type="button" class="passage-tab" data-passage="clothing" role="tab" aria-selected="false">
+                  5,6학년수준<br /><strong>의생활</strong>
+                </button>
+              </div>
+              <input id="passageTitle" type="hidden" />
             </div>
           </section>
 
           <section class="panel">
             <h2>2. 읽기 자료와 전사 텍스트</h2>
             <label>
-              문단글 원문 선택
-              <select id="passageSelect" required>
-                <option value="gimbap">1) 김밥만들기 - 1,2학년수준</option>
-                <option value="mountainSea">2) 산과 바다 - 3,4학년수준</option>
-                <option value="clothing">3) 의생활 - 5,6학년수준</option>
-              </select>
-            </label>
-            <label>
-              교사가 제시한 문단글 원문
+              제시문
               <textarea id="readingPassage" rows="10" readonly required></textarea>
             </label>
             <div class="upload-row">
@@ -105,22 +111,22 @@
           </section>
 
           <section class="panel">
-            <h2>4. 읽기 속도 및 분석</h2>
-            <div class="field-grid two-columns">
+            <h2>4. 읽기 시간</h2>
+            <div class="field-grid">
               <label>
                 실제 읽기 시간(초)
                 <input id="durationSec" type="number" min="1" step="1" placeholder="예: 60" required />
               </label>
-              <label>
-                목표 읽기 속도(글자/분)
-                <input id="targetCpm" type="number" min="1" step="1" value="300" />
-              </label>
             </div>
+            <p id="analysisStatus" class="status-text">분석 전입니다.</p>
+          </section>
+
+          <section class="panel final-action-panel">
+            <h2>5. 분석 실행</h2>
             <div class="action-row">
               <button type="button" id="analyzeBtn" class="primary-button">분석 결과 생성</button>
               <button type="button" id="saveResultBtn" class="secondary-button" disabled>저장하기</button>
             </div>
-            <p id="analysisStatus" class="status-text">분석 전입니다.</p>
           </section>
         </form>
 
