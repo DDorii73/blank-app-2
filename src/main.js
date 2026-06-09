@@ -40,6 +40,7 @@ const elements = {
   summaryTableBody: document.querySelector("#summaryTableBody"),
   errorTableBody: document.querySelector("#errorTableBody"),
   reportText: document.querySelector("#reportText"),
+  interpretationSheetText: document.querySelector("#interpretationSheetText"),
 };
 
 const PASSAGE_OPTIONS = {
@@ -103,6 +104,7 @@ elements.resetFormBtn.addEventListener("click", () => {
   elements.summaryTableBody.replaceChildren();
   elements.errorTableBody.replaceChildren();
   elements.reportText.value = "";
+  elements.interpretationSheetText.value = "";
   elements.scoreBadge.textContent = "-";
   elements.saveResultBtn.disabled = true;
   elements.analysisStatus.textContent = "분석 전입니다.";
@@ -269,6 +271,7 @@ function runAnalysis() {
     analysisResult = analyzeReading(input);
     renderAnalysisTable(analysisResult);
     renderReport(analysisResult.report);
+    renderInterpretationSheet(analysisResult.interpretationSheet);
     elements.resultsPanel.classList.remove("hidden");
     elements.saveResultBtn.disabled = false;
     elements.analysisStatus.textContent = "분석 결과가 생성되었습니다. 필요하면 보고서를 수정한 뒤 저장하세요.";
@@ -303,6 +306,7 @@ function saveAnalysisResult() {
     errorAnalysis: analysisResult.errorAnalysis,
     fluencyScore: analysisResult.finalScore,
     reportText: elements.reportText.value,
+    interpretationSheetText: elements.interpretationSheetText.value,
     createdAt: new Date().toISOString(),
   };
 
@@ -329,6 +333,7 @@ function saveStudentDraft() {
     transcriptText: elements.transcriptText.value,
     durationSec: elements.durationSec.value,
     reportText: elements.reportText.value,
+    interpretationSheetText: elements.interpretationSheetText.value,
     analysisResult,
     savedAt: new Date().toISOString(),
   };
@@ -516,6 +521,7 @@ function analyzeReading(input) {
   };
 
   result.report = generateReadingReport(result);
+  result.interpretationSheet = generateResultInterpretationSheet(result);
   return result;
 }
 
@@ -738,6 +744,10 @@ function renderReport(reportText) {
   elements.reportText.value = reportText;
 }
 
+function renderInterpretationSheet(interpretationText) {
+  elements.interpretationSheetText.value = interpretationText;
+}
+
 function generateReadingReport(analysisResult) {
   const { counts, summaryRows } = analysisResult.errorAnalysis;
   const studentInfo = formatStudent(analysisResult.student);
@@ -791,6 +801,40 @@ function generateReadingReport(analysisResult) {
     ...guidance.map((item) => `- ${item}`),
     "",
     "※ 추후 Firebase Functions 같은 서버 환경에서 OpenAI 분석 결과를 받아 더 정교한 보고서로 교체할 수 있습니다.",
+  ].join("\n");
+}
+
+function generateResultInterpretationSheet(analysisResult) {
+  const studentName = analysisResult.student.name || "해당 학생";
+  const passageInfo = parsePassageTitle(analysisResult.passageTitle);
+  const errorRows = analysisResult.errorAnalysis.summaryRows;
+  const primaryErrors = errorRows
+    .filter((row) => row.count > 0)
+    .sort((left, right) => right.count - left.count);
+  const primaryErrorText = primaryErrors.length
+    ? primaryErrors.map((row) => `${row.label} ${row.count}회`).join(", ")
+    : "뚜렷하게 높은 빈도의 오류 유형은 나타나지 않았다";
+  const exampleText = primaryErrors
+    .flatMap((row) => row.examples.map((example) => `‘${example}’`))
+    .slice(0, 2)
+    .join(", ");
+  const firstPrimaryError = primaryErrors[0];
+  const secondPrimaryError = primaryErrors[1];
+  const readingSpeedLevel = analysisResult.finalScore.correctSyllablesPer10Sec < 30
+    ? "낮게"
+    : "비교적 안정적으로";
+  const guidanceText = getReportGuidance(analysisResult, primaryErrors).join(" ");
+
+  return [
+    `다음은 ${passageInfo.level} 「${passageInfo.title}」 지문을 활용한 문단글 읽기 유창성 검사 결과 해석이다. 본 해석지는 입력된 원문과 전사문을 바탕으로 교사가 학생의 읽기 수행 양상을 검토할 수 있도록 작성한 것이다.`,
+    "",
+    `${studentName} 학생은 ${passageInfo.level} 「${passageInfo.title}」 지문을 읽는 과정에서 전체 읽은 음절 수 ${analysisResult.finalScore.totalReadSyllables}음절 중 오류 묶음 ${analysisResult.finalScore.errorCount}개를 보였으며, 전체 소요시간은 ${analysisResult.durationSec}초였다. 이에 따라 10초당 정확하게 읽은 음절 수는 [(${analysisResult.finalScore.totalReadSyllables}-${analysisResult.finalScore.errorCount})/${analysisResult.durationSec}]×10으로 산출되며, 약 ${analysisResult.finalScore.correctSyllablesPer10Sec}음절로 계산된다. 오류 유형을 분석한 결과, ${primaryErrorText}가 나타났다.`,
+    "",
+    `오류 양상을 살펴보면, ${studentName} 학생은 ${firstPrimaryError ? `${firstPrimaryError.label} 오류가 상대적으로 두드러졌다` : "전반적으로 특정 오류 유형에 치우치기보다 현재 전사 자료에서 큰 오류가 많이 나타나지 않았다"}. ${secondPrimaryError ? `또한 ${secondPrimaryError.label} 오류도 함께 나타나 문장 흐름을 안정적으로 유지하는 데 영향을 줄 수 있다.` : ""} ${exampleText ? `예를 들어 ${exampleText}와 같은 전사 예시는 원문과 전사문을 비교하여 학생이 어떤 부분에서 어려움을 보이는지 확인할 수 있게 한다.` : "구체적인 전사 예시는 추가 전사 자료가 확보되면 더 정밀하게 확인할 수 있다."}`,
+    "",
+    `읽기속도 측면에서는 10초당 정확하게 읽은 음절 수가 ${readingSpeedLevel} 나타났다. 이 결과는 단순히 빠르게 또는 느리게 읽는 문제만으로 해석하기보다, 오류 빈도와 오류 유형을 함께 고려할 필요가 있다. 특히 반복, 대치, 생략, 삽입, 자기수정과 같은 오류가 함께 나타나는 경우에는 문단 수준에서 정확한 해독과 읽기 자동화가 얼마나 안정되어 있는지를 함께 살펴보아야 한다.`,
+    "",
+    `따라서 ${studentName} 학생의 읽기 수행은 원문을 얼마나 정확하게 확인하며 읽는지, 문장 속 조사와 어미를 안정적으로 처리하는지, 그리고 문장 흐름을 유지하며 읽는지의 관점에서 해석할 수 있다. 향후 지도에서는 ${guidanceText || "학생의 오류 유형을 중심으로 짧은 문장 반복 읽기와 어절 단위 끊어 읽기를 제공할 필요가 있다."}`,
   ].join("\n");
 }
 
@@ -866,6 +910,22 @@ function getReportGuidance(result, primaryErrors) {
   guidance.push(...buildRecommendation(result).split("\n"));
 
   return getUniqueValues(guidance).slice(0, 4);
+}
+
+function parsePassageTitle(passageTitle = "") {
+  const match = passageTitle.match(/^(.+?)\s*\((.+?)\)$/);
+
+  if (!match) {
+    return {
+      title: passageTitle || "선택 지문",
+      level: "선택한 학년 수준",
+    };
+  }
+
+  return {
+    title: match[1],
+    level: match[2],
+  };
 }
 
 function extractTranscriptText(fileText, fileName) {
