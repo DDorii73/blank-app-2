@@ -220,13 +220,7 @@ async function transcribeRecording() {
 }
 
 async function convertRecordingToText(recordingBlob) {
-  const serverTranscriptionEndpoint = "";
-
-  if (!serverTranscriptionEndpoint) {
-    throw new Error(
-      "녹음 파일 전사는 추후 Firebase Functions 같은 서버 환경에 연결해야 합니다. OpenAI API Key는 프론트엔드에 두지 않습니다.",
-    );
-  }
+  const serverTranscriptionEndpoint = "/api/transcribe";
 
   const formData = new FormData();
   formData.append("recording", recordingBlob, "reading-recording.webm");
@@ -237,7 +231,8 @@ async function convertRecordingToText(recordingBlob) {
   });
 
   if (!response.ok) {
-    throw new Error("서버 전사 함수 호출에 실패했습니다.");
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "서버 전사 함수 호출에 실패했습니다.");
   }
 
   const data = await response.json();

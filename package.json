@@ -25,6 +25,8 @@
     "vite": "^8.0.16"
   },
   "dependencies": {
-    "firebase": "^12.14.0"
+    "busboy": "^1.6.0",
+    "firebase": "^12.14.0",
+    "openai": "^6.42.0"
   }
 }
