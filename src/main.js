@@ -26,6 +26,8 @@ const elements = {
   stopRecordingBtn: document.querySelector("#stopRecordingBtn"),
   rerecordBtn: document.querySelector("#rerecordBtn"),
   transcribeRecordingBtn: document.querySelector("#transcribeRecordingBtn"),
+  recordingPanel: document.querySelector("#recordingPanel"),
+  recordingVisualText: document.querySelector("#recordingVisualText"),
   recordingPlayer: document.querySelector("#recordingPlayer"),
   recordingStatus: document.querySelector("#recordingStatus"),
   durationSec: document.querySelector("#durationSec"),
@@ -181,6 +183,7 @@ async function startRecording() {
       elements.transcribeRecordingBtn.disabled = false;
       elements.recordingStatus.textContent =
         "녹음이 완료되었습니다. 원본 파일은 Firebase에 저장되지 않습니다.";
+      setRecordingVisualState("completed");
       stopMediaStream();
     });
 
@@ -190,8 +193,10 @@ async function startRecording() {
     elements.rerecordBtn.disabled = true;
     elements.transcribeRecordingBtn.disabled = true;
     elements.recordingStatus.textContent = "녹음 중입니다.";
+    setRecordingVisualState("recording");
   } catch (error) {
     elements.recordingStatus.textContent = `마이크 접근 실패: ${error.message}`;
+    setRecordingVisualState("idle");
     stopMediaStream();
   }
 }
@@ -210,6 +215,16 @@ function stopRecording() {
 function restartRecording() {
   clearRecording();
   startRecording();
+}
+
+function setRecordingVisualState(state) {
+  const isRecording = state === "recording";
+  elements.recordingPanel.classList.toggle("recording-active", isRecording);
+  elements.recordingVisualText.textContent = {
+    idle: "녹음 대기",
+    recording: "녹음 중",
+    completed: "녹음 완료",
+  }[state] || "녹음 대기";
 }
 
 async function transcribeRecording() {
@@ -930,6 +945,7 @@ function clearRecording() {
   elements.startRecordingBtn.disabled = false;
   elements.stopRecordingBtn.disabled = true;
   elements.recordingStatus.textContent = "녹음 대기 중";
+  setRecordingVisualState("idle");
 
   if (recordingUrl) {
     URL.revokeObjectURL(recordingUrl);

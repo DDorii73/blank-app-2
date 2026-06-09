@@ -492,6 +492,69 @@ tbody tr:hover {
   min-width: min(100%, 320px);
 }
 
+.recording-panel {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.recording-panel.recording-active {
+  border-color: #d65038;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 238, 0.98), rgba(255, 232, 220, 0.98)),
+    var(--card);
+  box-shadow: 0 0 0 4px rgba(214, 80, 56, 0.12), 0 18px 38px rgba(154, 67, 38, 0.16);
+}
+
+.recording-visual-status {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  margin-bottom: 1rem;
+  background: #fffdf8;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.recording-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: #cdb8a2;
+}
+
+.recording-panel.recording-active .recording-visual-status {
+  border-color: #efa28e;
+  background: #fff1ea;
+  color: #9b2f20;
+}
+
+.recording-panel.recording-active .recording-dot {
+  background: #d93025;
+  box-shadow: 0 0 0 0 rgba(217, 48, 37, 0.55);
+  animation: recordingPulse 1.15s ease-out infinite;
+}
+
+@keyframes recordingPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 48, 37, 0.55);
+    transform: scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 0.55rem rgba(217, 48, 37, 0);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 48, 37, 0);
+    transform: scale(1);
+  }
+}
+
 .status-text {
   margin-bottom: 0;
   color: var(--muted);

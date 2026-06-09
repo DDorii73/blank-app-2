@@ -96,11 +96,15 @@
             </label>
           </section>
 
-          <section class="panel">
+          <section id="recordingPanel" class="panel recording-panel">
             <h2>3. 브라우저 녹음</h2>
             <p class="muted">
               녹음 원본 파일은 Firebase에 저장하지 않습니다. 이 화면에서만 재생하거나 추후 서버 전사 함수로 전달하는 용도입니다.
             </p>
+            <div id="recordingVisualStatus" class="recording-visual-status" aria-live="polite">
+              <span class="recording-dot" aria-hidden="true"></span>
+              <span id="recordingVisualText">녹음 대기</span>
+            </div>
             <div class="recording-controls">
               <button type="button" id="startRecordingBtn" class="primary-button">녹음 시작</button>
               <button type="button" id="stopRecordingBtn" class="secondary-button" disabled>녹음 종료</button>
