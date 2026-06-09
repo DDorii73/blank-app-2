@@ -482,8 +482,8 @@ function analyzeReading(input) {
   const errorSummaryRows = buildErrorSummaryRows(counts, errorDetails, textAnalysis);
   const totalErrors = counts.omission + counts.insertion + counts.substitution + counts.repetition;
   const totalReadSyllables = charactersRead;
-  const errorSyllables = countErrorSyllables(errorDetails);
-  const correctSyllables = Math.max(totalReadSyllables - errorSyllables, 0);
+  const errorCount = totalErrors;
+  const correctSyllables = Math.max(totalReadSyllables - errorCount, 0);
   const correctSyllablesPer10Sec = roundToOne((correctSyllables / input.durationSec) * 10);
   const score = correctSyllablesPer10Sec;
 
@@ -508,10 +508,10 @@ function analyzeReading(input) {
     finalScore: {
       score,
       totalReadSyllables,
-      errorSyllables,
+      errorCount,
       correctSyllables,
       correctSyllablesPer10Sec,
-      scoringRule: "[(전체 읽은 음절 수 - 오류를 보인 음절 수) / 전체 문단글 읽기 시간(초)] × 10",
+      scoringRule: "[(전체 읽은 음절 수 - 오류 묶음 개수) / 전체 문단글 읽기 시간(초)] × 10",
     },
   };
 
@@ -675,25 +675,6 @@ function getErrorExamples(details, type) {
   return getUniqueValues(examples).slice(0, 3);
 }
 
-function countErrorSyllables(details) {
-  return details.reduce((total, detail) => {
-    if (detail.type === "omission") {
-      return total + countReadableCharacters(detail.reference || "");
-    }
-    if (detail.type === "insertion" || detail.type === "repetition") {
-      return total + countReadableCharacters(detail.transcript || "");
-    }
-    if (detail.type === "substitution") {
-      return total + Math.max(
-        countReadableCharacters(detail.reference || ""),
-        countReadableCharacters(detail.transcript || ""),
-      );
-    }
-
-    return total;
-  }, 0);
-}
-
 function renderAnalysisTable(analysisResult) {
   const summaryRows = [
     ["학생", formatStudent(analysisResult.student)],
@@ -710,12 +691,12 @@ function renderAnalysisTable(analysisResult) {
     ["완독률", `${analysisResult.errorAnalysis.completenessPercent}%`],
     ["오류 합계", `${analysisResult.errorAnalysis.totalErrors}개`],
     ["전체 읽은 음절 수", `${analysisResult.finalScore.totalReadSyllables}음절`],
-    ["오류를 보인 음절 수", `${analysisResult.finalScore.errorSyllables}음절`],
+    ["오류 묶음 개수", `${analysisResult.finalScore.errorCount}개`],
     ["정확하게 읽은 음절 수", `${analysisResult.finalScore.correctSyllables}음절`],
     ["산출식", analysisResult.finalScore.scoringRule],
     [
       "계산",
-      `(${analysisResult.finalScore.totalReadSyllables} - ${analysisResult.finalScore.errorSyllables}) / ${analysisResult.durationSec} × 10 = ${analysisResult.finalScore.correctSyllablesPer10Sec}`,
+      `(${analysisResult.finalScore.totalReadSyllables} - ${analysisResult.finalScore.errorCount}) / ${analysisResult.durationSec} × 10 = ${analysisResult.finalScore.correctSyllablesPer10Sec}`,
     ],
     ["10초당 정확하게 읽은 음절 수", `${analysisResult.finalScore.correctSyllablesPer10Sec}음절`],
   ];
@@ -793,7 +774,7 @@ function generateReadingReport(analysisResult) {
     "4. 유창성 수준 요약",
     `- 산출식: ${analysisResult.finalScore.scoringRule}`,
     `- 전체 읽은 음절 수: ${analysisResult.finalScore.totalReadSyllables}음절`,
-    `- 오류를 보인 음절 수: ${analysisResult.finalScore.errorSyllables}음절`,
+    `- 오류 묶음 개수: ${analysisResult.finalScore.errorCount}개`,
     `- 정확하게 읽은 음절 수: ${analysisResult.finalScore.correctSyllables}음절`,
     `- 10초당 정확하게 읽은 음절 수: ${analysisResult.finalScore.correctSyllablesPer10Sec}음절`,
     `- 정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
