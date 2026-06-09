@@ -24,6 +24,7 @@ const elements = {
   transcriptText: document.querySelector("#transcriptText"),
   startRecordingBtn: document.querySelector("#startRecordingBtn"),
   stopRecordingBtn: document.querySelector("#stopRecordingBtn"),
+  rerecordBtn: document.querySelector("#rerecordBtn"),
   transcribeRecordingBtn: document.querySelector("#transcribeRecordingBtn"),
   recordingPlayer: document.querySelector("#recordingPlayer"),
   recordingStatus: document.querySelector("#recordingStatus"),
@@ -132,6 +133,7 @@ elements.loadTranscriptBtn.addEventListener("click", async () => {
 
 elements.startRecordingBtn.addEventListener("click", startRecording);
 elements.stopRecordingBtn.addEventListener("click", stopRecording);
+elements.rerecordBtn.addEventListener("click", restartRecording);
 elements.transcribeRecordingBtn.addEventListener("click", transcribeRecording);
 elements.analyzeBtn.addEventListener("click", runAnalysis);
 elements.saveResultBtn.addEventListener("click", saveAnalysisResult);
@@ -175,6 +177,7 @@ async function startRecording() {
       recordingUrl = URL.createObjectURL(recordedBlob);
       elements.recordingPlayer.src = recordingUrl;
       elements.recordingPlayer.classList.remove("hidden");
+      elements.rerecordBtn.disabled = false;
       elements.transcribeRecordingBtn.disabled = false;
       elements.recordingStatus.textContent =
         "녹음이 완료되었습니다. 원본 파일은 Firebase에 저장되지 않습니다.";
@@ -184,6 +187,7 @@ async function startRecording() {
     mediaRecorder.start();
     elements.startRecordingBtn.disabled = true;
     elements.stopRecordingBtn.disabled = false;
+    elements.rerecordBtn.disabled = true;
     elements.transcribeRecordingBtn.disabled = true;
     elements.recordingStatus.textContent = "녹음 중입니다.";
   } catch (error) {
@@ -201,6 +205,11 @@ function stopRecording() {
 
   elements.startRecordingBtn.disabled = false;
   elements.stopRecordingBtn.disabled = true;
+}
+
+function restartRecording() {
+  clearRecording();
+  startRecording();
 }
 
 async function transcribeRecording() {
@@ -917,6 +926,7 @@ function clearRecording() {
   elements.recordingPlayer.removeAttribute("src");
   elements.recordingPlayer.classList.add("hidden");
   elements.transcribeRecordingBtn.disabled = true;
+  elements.rerecordBtn.disabled = true;
   elements.startRecordingBtn.disabled = false;
   elements.stopRecordingBtn.disabled = true;
   elements.recordingStatus.textContent = "녹음 대기 중";
