@@ -30,9 +30,8 @@ const sampleMonitorResults = [
       syllablesPerMinute: 286,
       wordsPerMinute: 64,
     },
-    finalScore: {
-      score: 82,
-      band: "양호",
+    fluencyScore: {
+      correctSyllablesPer10Sec: 42.5,
     },
     majorErrorTypes: ["대치/발음 오류", "반복"],
     analysisRows: [
@@ -41,7 +40,7 @@ const sampleMonitorResults = [
       ["검사 날짜", "2026-06-07"],
       ["읽기 자료", "봄이 오는 길"],
       ["읽기 속도", "286 음절/분 · 64 어절/분"],
-      ["최종 점수", "82점 (양호)"],
+      ["10초당 정확하게 읽은 음절 수", "42.5음절"],
       ["주요 오류 유형", "대치/발음 오류, 반복"],
     ],
     reportText:
@@ -57,9 +56,8 @@ const sampleMonitorResults = [
       syllablesPerMinute: 241,
       wordsPerMinute: 58,
     },
-    finalScore: {
-      score: 74,
-      band: "보통",
+    fluencyScore: {
+      correctSyllablesPer10Sec: 36.8,
     },
     majorErrorTypes: ["누락", "삽입"],
     analysisRows: [
@@ -68,7 +66,7 @@ const sampleMonitorResults = [
       ["검사 날짜", "2026-06-06"],
       ["읽기 자료", "작은 씨앗"],
       ["읽기 속도", "241 음절/분 · 58 어절/분"],
-      ["최종 점수", "74점 (보통)"],
+      ["10초당 정확하게 읽은 음절 수", "36.8음절"],
       ["주요 오류 유형", "누락, 삽입"],
     ],
     reportText:
@@ -161,7 +159,7 @@ function renderTable(results) {
         result.studentName || "-",
         result.testDate || "-",
         formatReadingSpeed(result.readingSpeed),
-        `${result.finalScore?.score ?? "-"}점`,
+        `${result.fluencyScore?.correctSyllablesPer10Sec ?? "-"}음절`,
         result.majorErrorTypes?.join(", ") || "-",
       ];
 

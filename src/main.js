@@ -277,7 +277,7 @@ function saveAnalysisResult() {
     transcriptText: analysisResult.transcriptText,
     readingSpeed: analysisResult.readingSpeed,
     errorAnalysis: analysisResult.errorAnalysis,
-    finalScore: analysisResult.finalScore,
+    fluencyScore: analysisResult.finalScore,
     reportText: elements.reportText.value,
     createdAt: new Date().toISOString(),
   };
@@ -457,9 +457,11 @@ function analyzeReading(input) {
     .concat(repetitions);
   const errorSummaryRows = buildErrorSummaryRows(counts, errorDetails, textAnalysis);
   const totalErrors = counts.omission + counts.insertion + counts.substitution + counts.repetition;
-  const scoreBase = referenceCharacters;
-  const errorPenalty = totalErrors;
-  const score = Math.max(scoreBase - errorPenalty, 0);
+  const totalReadSyllables = charactersRead;
+  const errorSyllables = countErrorSyllables(errorDetails);
+  const correctSyllables = Math.max(totalReadSyllables - errorSyllables, 0);
+  const correctSyllablesPer10Sec = roundToOne((correctSyllables / input.durationSec) * 10);
+  const score = correctSyllablesPer10Sec;
 
   const result = {
     ...input,
@@ -481,9 +483,11 @@ function analyzeReading(input) {
     },
     finalScore: {
       score,
-      scoreBase,
-      errorPenalty,
-      scoringRule: "음절당 1점, 오류 1회당 -1점",
+      totalReadSyllables,
+      errorSyllables,
+      correctSyllables,
+      correctSyllablesPer10Sec,
+      scoringRule: "[(전체 읽은 음절 수 - 오류를 보인 음절 수) / 전체 문단글 읽기 시간(초)] × 10",
     },
   };
 
@@ -647,6 +651,25 @@ function getErrorExamples(details, type) {
   return getUniqueValues(examples).slice(0, 3);
 }
 
+function countErrorSyllables(details) {
+  return details.reduce((total, detail) => {
+    if (detail.type === "omission") {
+      return total + countReadableCharacters(detail.reference || "");
+    }
+    if (detail.type === "insertion" || detail.type === "repetition") {
+      return total + countReadableCharacters(detail.transcript || "");
+    }
+    if (detail.type === "substitution") {
+      return total + Math.max(
+        countReadableCharacters(detail.reference || ""),
+        countReadableCharacters(detail.transcript || ""),
+      );
+    }
+
+    return total;
+  }, 0);
+}
+
 function renderAnalysisTable(analysisResult) {
   const summaryRows = [
     ["학생", formatStudent(analysisResult.student)],
@@ -662,12 +685,15 @@ function renderAnalysisTable(analysisResult) {
     ["정확도", `${analysisResult.errorAnalysis.accuracyPercent}%`],
     ["완독률", `${analysisResult.errorAnalysis.completenessPercent}%`],
     ["오류 합계", `${analysisResult.errorAnalysis.totalErrors}개`],
-    ["채점 기준", analysisResult.finalScore.scoringRule],
+    ["전체 읽은 음절 수", `${analysisResult.finalScore.totalReadSyllables}음절`],
+    ["오류를 보인 음절 수", `${analysisResult.finalScore.errorSyllables}음절`],
+    ["정확하게 읽은 음절 수", `${analysisResult.finalScore.correctSyllables}음절`],
+    ["산출식", analysisResult.finalScore.scoringRule],
     [
-      "점수 산출",
-      `${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
+      "계산",
+      `(${analysisResult.finalScore.totalReadSyllables} - ${analysisResult.finalScore.errorSyllables}) / ${analysisResult.durationSec} × 10 = ${analysisResult.finalScore.correctSyllablesPer10Sec}`,
     ],
-    ["최종 점수", `${analysisResult.finalScore.score}점`],
+    ["10초당 정확하게 읽은 음절 수", `${analysisResult.finalScore.correctSyllablesPer10Sec}음절`],
   ];
 
   elements.summaryTableBody.replaceChildren(
@@ -700,7 +726,7 @@ function renderAnalysisTable(analysisResult) {
     }),
   );
 
-  elements.scoreBadge.textContent = `${analysisResult.finalScore.score}점`;
+  elements.scoreBadge.textContent = `${analysisResult.finalScore.correctSyllablesPer10Sec}음절/10초`;
 }
 
 function renderReport(reportText) {
@@ -741,9 +767,11 @@ function generateReadingReport(analysisResult) {
     `- 반복: ${counts.repetition}개`,
     "",
     "4. 유창성 수준 요약",
-    `- 채점 기준: ${analysisResult.finalScore.scoringRule}`,
-    `- 점수 산출: ${analysisResult.finalScore.scoreBase}점 - ${analysisResult.finalScore.errorPenalty}점 = ${analysisResult.finalScore.score}점`,
-    `- 최종 점수: ${analysisResult.finalScore.score}점`,
+    `- 산출식: ${analysisResult.finalScore.scoringRule}`,
+    `- 전체 읽은 음절 수: ${analysisResult.finalScore.totalReadSyllables}음절`,
+    `- 오류를 보인 음절 수: ${analysisResult.finalScore.errorSyllables}음절`,
+    `- 정확하게 읽은 음절 수: ${analysisResult.finalScore.correctSyllables}음절`,
+    `- 10초당 정확하게 읽은 음절 수: ${analysisResult.finalScore.correctSyllablesPer10Sec}음절`,
     `- 정확도: ${analysisResult.errorAnalysis.accuracyPercent}%`,
     `- 완독률: ${analysisResult.errorAnalysis.completenessPercent}%`,
     "- 현재 단계에서는 프론트엔드 임시 분석 결과를 바탕으로 한 예시 요약입니다.",
