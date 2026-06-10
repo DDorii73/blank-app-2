@@ -1,5 +1,9 @@
 .streamlit/secrets.toml
 
+# JavaScript dependencies and build output
+node_modules/
+dist/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

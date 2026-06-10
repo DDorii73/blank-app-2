@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>문단글 읽기 유창성 검사 도구</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="landing-shell">
+      <section class="hero-card">
+        <p class="eyebrow">Teacher Reading Fluency Assistant</p>
+        <h1>문단글 읽기 유창성 검사 보조 Web-app</h1>
+        <p class="hero-copy">
+          학생의 문단글 읽기 전사 자료를 바탕으로 읽기 속도, 오류 유형,
+          유창성 점수, 개별 보고서를 정리할 수 있도록 돕는 교사용 도구입니다.
+        </p>
+
+        <div id="configNotice" class="notice warning hidden">
+          Firebase 설정이 아직 입력되지 않았습니다. <code>src/firebaseConfig.js</code>의
+          프로젝트 설정을 교체하면 Google 로그인을 사용할 수 있습니다.
+        </div>
+
+        <div id="userPanel" class="auth-panel">
+          <button id="googleLoginBtn" class="primary-button">Google 로그인</button>
+          <button id="logoutBtn" class="secondary-button hidden">로그아웃</button>
+          <p id="authStatus" class="muted" role="status">교사 로그인이 필요합니다.</p>
+        </div>
+
+        <div id="routeGrid" class="route-grid hidden" aria-label="로그인 후 이동 메뉴">
+          <a id="studentPageLink" class="route-card disabled" href="./student.html" aria-disabled="true">
+            <span>01</span>
+            <strong>학생 정보 및 검사하기</strong>
+            <small>학생 정보, 전사 업로드, 녹음, 분석, 저장</small>
+          </a>
+          <a id="monitorPageLink" class="route-card disabled" href="./teacherMonitor.html" aria-disabled="true">
+            <span>02</span>
+            <strong>교사 모니터링</strong>
+            <small>학생별 저장 결과 조회 및 보고서 확인</small>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/index.js"></script>
+  </body>
+</html>

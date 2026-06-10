@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>학생 정보 및 읽기 검사</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Assessment Workspace</p>
+        <h1>학생 정보 및 문단글 읽기 검사</h1>
+      </div>
+      <nav class="top-nav">
+        <a href="./index.html">메인</a>
+        <a href="./teacherMonitor.html">교사 모니터링</a>
+        <button id="logoutBtn" class="ghost-button">로그아웃</button>
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <section id="authGate" class="notice warning">
+        로그인 상태를 확인하고 있습니다. 교사 Google 로그인이 필요합니다.
+      </section>
+
+      <section id="appContent" class="workspace hidden">
+        <div class="teacher-strip">
+          <span id="teacherInfo">교사 계정 확인 중</span>
+        </div>
+
+        <form id="assessmentForm" class="form-grid">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>1. 학생 정보</h2>
+              <div class="action-row">
+                <button type="button" id="tempSaveBtn" class="secondary-button">학생별 임시저장</button>
+                <button type="button" id="resetFormBtn" class="text-button">새 검사 입력</button>
+              </div>
+            </div>
+            <div class="field-grid two-columns">
+              <label>
+                학생 이름
+                <input id="studentName" type="text" placeholder="예: 김민준" required />
+              </label>
+              <label>
+                학생 ID 또는 학번
+                <input id="studentId" type="text" placeholder="예: 2026-03" />
+              </label>
+              <label>
+                학년
+                <input id="grade" type="text" placeholder="예: 3학년" />
+              </label>
+              <label>
+                반 / 그룹
+                <input id="className" type="text" placeholder="예: 2반" />
+              </label>
+              <label>
+                검사 날짜
+                <input id="testDate" type="date" required />
+              </label>
+            </div>
+            <div class="passage-tabs-wrap">
+              <p class="field-title">읽기 자료 제목</p>
+              <div class="passage-tabs" role="tablist" aria-label="학년 수준별 읽기 자료 선택">
+                <button type="button" class="passage-tab active" data-passage="gimbap" role="tab" aria-selected="true">
+                  1,2학년수준<br /><strong>김밥만들기</strong>
+                </button>
+                <button type="button" class="passage-tab" data-passage="mountainSea" role="tab" aria-selected="false">
+                  3,4학년수준<br /><strong>산과 바다</strong>
+                </button>
+                <button type="button" class="passage-tab" data-passage="clothing" role="tab" aria-selected="false">
+                  5,6학년수준<br /><strong>의생활</strong>
+                </button>
+              </div>
+              <input id="passageTitle" type="hidden" />
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>2. 읽기 자료와 전사 텍스트</h2>
+            <label>
+              제시문
+              <textarea id="readingPassage" rows="10" readonly required></textarea>
+            </label>
+            <div class="upload-row">
+              <label class="file-label">
+                STT 전사파일 업로드
+                <input id="transcriptFile" type="file" accept=".txt,.json,.srt,.vtt,text/plain,application/json" />
+              </label>
+              <button type="button" id="loadTranscriptBtn" class="secondary-button">전사파일 불러오기</button>
+            </div>
+            <label>
+              전사 텍스트
+              <textarea id="transcriptText" rows="8" placeholder="STT 전사 결과 또는 검사자가 수정한 텍스트를 입력하세요." required></textarea>
+            </label>
+          </section>
+
+          <section id="recordingPanel" class="panel recording-panel">
+            <h2>3. 브라우저 녹음</h2>
+            <p class="muted">
+              녹음 원본 파일은 Firebase에 저장하지 않습니다. 이 화면에서만 재생하거나 추후 서버 전사 함수로 전달하는 용도입니다.
+            </p>
+            <div id="recordingVisualStatus" class="recording-visual-status" aria-live="polite">
+              <span class="recording-dot" aria-hidden="true"></span>
+              <span id="recordingVisualText">녹음 대기</span>
+            </div>
+            <div class="recording-controls">
+              <button type="button" id="startRecordingBtn" class="primary-button">녹음 시작</button>
+              <button type="button" id="stopRecordingBtn" class="secondary-button" disabled>녹음 종료</button>
+              <button type="button" id="rerecordBtn" class="secondary-button" disabled>다시 녹음</button>
+              <button type="button" id="transcribeRecordingBtn" class="secondary-button" disabled>녹음 파일을 텍스트로 변환</button>
+            </div>
+            <audio id="recordingPlayer" class="hidden" controls></audio>
+            <p id="recordingStatus" class="status-text">녹음 대기 중</p>
+          </section>
+
+          <section class="panel">
+            <h2>4. 읽기 시간</h2>
+            <div class="field-grid">
+              <label>
+                실제 읽기 시간(초)
+                <input id="durationSec" type="number" min="1" step="1" placeholder="예: 60" required />
+              </label>
+            </div>
+            <p id="analysisStatus" class="status-text">분석 전입니다.</p>
+          </section>
+
+          <section class="panel final-action-panel">
+            <h2>5. 분석 실행</h2>
+            <div class="action-row">
+              <button type="button" id="analyzeBtn" class="primary-button">분석 결과 생성</button>
+              <button type="button" id="saveResultBtn" class="secondary-button" disabled>저장하기</button>
+            </div>
+          </section>
+        </form>
+
+        <section id="resultsPanel" class="panel hidden">
+          <div class="panel-heading">
+            <h2>분석 결과 표</h2>
+            <span id="scoreBadge" class="score-badge">-</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <tbody id="summaryTableBody"></tbody>
+            </table>
+          </div>
+
+          <h3>오류 유형 분석</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>오류 유형</th>
+                  <th>오류 횟수</th>
+                  <th>전사 텍스트 예시</th>
+                  <th>해석</th>
+                  <th>지도 방향</th>
+                </tr>
+              </thead>
+              <tbody id="errorTableBody"></tbody>
+            </table>
+          </div>
+
+          <label>
+            학생 개별 보고서
+            <textarea id="reportText" rows="10"></textarea>
+          </label>
+
+          <div class="result-interpretation-box">
+            <h3>결과해석지</h3>
+            <textarea id="interpretationSheetText" rows="12" readonly></textarea>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

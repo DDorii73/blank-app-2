@@ -1,0 +1,32 @@
+{
+  "name": "teacher-reading-fluency-webapp",
+  "version": "1.0.0",
+  "description": "교사가 학생의 읽기 자료와 STT 전사 텍스트를 입력하고 읽기 속도, 오류 유형, 문단글 읽기 유창성 점수, 개별 보고서를 관리하는 정적 Web-app입니다.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 5173 --strictPort",
+    "check": "node --check vite.config.js && node --check netlify/functions/transcribe.js && node --check src/firebaseConfig.js && node --check src/index.js && node --check src/main.js && node --check src/admin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DDorii73/blank-app-2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/DDorii73/blank-app-2/issues"
+  },
+  "homepage": "https://github.com/DDorii73/blank-app-2#readme",
+  "devDependencies": {
+    "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "firebase": "^12.14.0",
+    "openai": "^6.42.0"
+  }
+}
