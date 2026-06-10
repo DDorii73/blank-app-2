@@ -44,11 +44,15 @@ VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
+OPENAI_API_KEY=...
 ```
 
 `src/firebaseConfig.js`는 위 환경변수를 읽어 Firebase Auth와 Firestore를 초기화합니다.
 Vite 설정에서 `FIREBASE_*` 접두사도 허용하므로, 이미 `FIREBASE_API_KEY`처럼 저장해둔
 값도 사용할 수 있습니다.
+
+`OPENAI_API_KEY`는 녹음 파일 전사용 서버 환경변수입니다. `VITE_` 접두사를 붙이지
+않아야 브라우저 프론트엔드에 노출되지 않습니다.
 
 Firestore 컬렉션 이름은 `readingFluencyResults`입니다. 문서에는 교사 UID가 함께
 저장되므로 모니터링 페이지는 현재 로그인한 교사의 결과만 조회합니다.
@@ -63,3 +67,45 @@ npm run dev
 ```
 
 이후 `http://localhost:5173`으로 접속합니다.
+
+## Netlify 배포
+
+이 프로젝트는 Netlify 정적 배포와 Netlify Functions를 함께 사용합니다.
+
+### 빌드 설정
+
+`netlify.toml`에 이미 다음 설정이 포함되어 있습니다.
+
+- Build command: `npm run build`
+- Publish directory: `dist`
+- Functions directory: `netlify/functions`
+- `/api/transcribe` -> `/.netlify/functions/transcribe` 리다이렉트
+
+### Netlify 환경변수
+
+Netlify Site settings > Environment variables에 아래 값을 등록합니다.
+
+```bash
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_DATABASE_URL=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+OPENAI_API_KEY=...
+```
+
+`OPENAI_API_KEY`는 Netlify Function에서만 사용됩니다. `VITE_OPENAI_API_KEY`로
+등록하지 마세요.
+
+### Firebase 승인 도메인
+
+Netlify 배포 후 Firebase Authentication > Settings > Authorized domains에
+Netlify 도메인을 추가해야 Google 로그인이 동작합니다.
+
+예:
+
+```text
+your-site-name.netlify.app
+```

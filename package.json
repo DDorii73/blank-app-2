@@ -8,7 +8,7 @@
     "dev": "vite --host 0.0.0.0 --port 5173 --strictPort",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5173 --strictPort",
-    "check": "node --check src/firebaseConfig.js && node --check src/index.js && node --check src/main.js && node --check src/admin.js"
+    "check": "node --check vite.config.js && node --check netlify/functions/transcribe.js && node --check src/firebaseConfig.js && node --check src/index.js && node --check src/main.js && node --check src/admin.js"
   },
   "repository": {
     "type": "git",
